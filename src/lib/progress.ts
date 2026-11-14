@@ -2,16 +2,32 @@ import "server-only";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { addDays, dayIn } from "./dates";
-import { computeStreak, crossedMilestones, type Celebration } from "./gamification";
+import { computeStreak, crossedMilestones, rankFor, streakTier, type Celebration } from "./gamification";
+import { LANGS } from "./langs";
 import { getSettings } from "./settings";
 import { FRESH, firstDue, schedule } from "./srs";
 
-const { progress, activity } = schema;
+const { progress, activity, items } = schema;
 
-async function totalLearned(userId: number) {
-  const [row] = await db.select({ n: count() }).from(progress).where(eq(progress.userId, userId));
-  return row.n;
+type Snapshot = Record<string, { total: number; today: number }>;
+
+/** Learned counts per item kind: all time and today. Taken before and after a write to detect achievements. */
+async function snapshot(userId: number, today: string): Promise<Snapshot> {
+  const rows = await db
+    .select({
+      kind: items.kind,
+      total: count(),
+      today: sql<number>`count(*) filter (where ${progress.learnedOn} = ${today})`.mapWith(Number),
+    })
+    .from(progress)
+    .innerJoin(items, eq(items.id, progress.itemId))
+    .where(eq(progress.userId, userId))
+    .groupBy(items.kind);
+  return Object.fromEntries(rows.map((r) => [r.kind, { total: r.total, today: r.today }]));
 }
+
+const sum = (s: Snapshot) => Object.values(s).reduce((a, v) => a + v.total, 0);
+const get = (s: Snapshot, kind: string) => s[kind] ?? { total: 0, today: 0 };
 
 export async function activeDays(userId: number, limit = 400) {
   const rows = await db
@@ -46,17 +62,42 @@ async function bumpActivity(
 async function celebrationsAfter(
   userId: number,
   firstOfDay: boolean,
-  learnedBefore: number,
-  learnedAfter: number,
+  before: Snapshot,
+  after: Snapshot,
   today: string,
 ): Promise<Celebration[]> {
   const settings = await getSettings();
   const out: Celebration[] = [];
+
   if (firstOfDay) {
     const { streak } = computeStreak(await activeDays(userId), today, addDays(today, -1));
-    if (streak >= 2) out.push({ type: "streak", days: streak });
+    if (streak >= 2) {
+      const tier = streakTier(streak);
+      out.push({
+        type: "streak",
+        days: streak,
+        tierUp: tier.index > 0 && tier.min === streak ? { index: tier.index, name: tier.name } : undefined,
+      });
+    }
   }
-  for (const m of crossedMilestones(learnedBefore, learnedAfter, settings.milestones)) {
+
+  for (const lang of ["zh", "en"] as const) {
+    const kind = LANGS[lang].wordKind;
+    const b = get(before, kind);
+    const a = get(after, kind);
+    const quota = settings.daily[kind];
+    if (quota > 0 && b.today < quota && a.today >= quota) out.push({ type: "goal", lang, count: a.today });
+    if (a.total > b.total) {
+      const scale = settings.rankScales[lang];
+      const prev = rankFor(b.total, scale);
+      const next = rankFor(a.total, scale);
+      if (next.level !== prev.level) {
+        out.push({ type: "rank", lang, level: next.level, title: next.title, color: next.color, index: next.index });
+      }
+    }
+  }
+
+  for (const m of crossedMilestones(sum(before), sum(after), settings.milestones)) {
     out.push({ type: "milestone", count: m });
   }
   return out;
@@ -66,7 +107,7 @@ export async function recordLearned(userId: number, itemIds: number[]) {
   if (!itemIds.length) return { added: 0, celebrations: [] as Celebration[] };
   const { timezone } = await getSettings();
   const today = dayIn(timezone);
-  const before = await totalLearned(userId);
+  const before = await snapshot(userId, today);
   const now = new Date();
   const inserted = await db
     .insert(progress)
@@ -75,7 +116,7 @@ export async function recordLearned(userId: number, itemIds: number[]) {
     .returning({ itemId: progress.itemId });
   if (!inserted.length) return { added: 0, celebrations: [] as Celebration[] };
   const firstOfDay = await bumpActivity(userId, today, { learned: inserted.length });
-  const celebrations = await celebrationsAfter(userId, firstOfDay, before, before + inserted.length, today);
+  const celebrations = await celebrationsAfter(userId, firstOfDay, before, await snapshot(userId, today), today);
   return { added: inserted.length, celebrations };
 }
 
@@ -112,7 +153,7 @@ export async function recordAnswers(userId: number, answers: Answer[]) {
     .from(progress)
     .where(and(eq(progress.userId, userId), inArray(progress.itemId, ids)));
   const prevById = new Map(existing.map((p) => [p.itemId, p]));
-  const before = await totalLearned(userId);
+  const before = await snapshot(userId, today);
   const fresh = ids.filter((id) => !prevById.has(id)).length;
 
   const rows = ids.map((itemId) => {
@@ -146,6 +187,6 @@ export async function recordAnswers(userId: number, answers: Answer[]) {
     correct,
     wrong: ids.length - correct,
   });
-  const celebrations = await celebrationsAfter(userId, firstOfDay, before, before + fresh, today);
+  const celebrations = await celebrationsAfter(userId, firstOfDay, before, await snapshot(userId, today), today);
   return { celebrations };
 }

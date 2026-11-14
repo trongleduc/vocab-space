@@ -4,11 +4,54 @@ import { Check, Eye, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { submitAnswers } from "@/app/actions/learn";
 import type { QuizQuestion } from "@/lib/queries";
-import { useCelebrate } from "./celebrate";
+import { pickQuote } from "@/lib/quotes";
+import { QuoteBlock, useCelebrate } from "./celebrate";
 import { Highlighted } from "./example";
 import { SpeakButton } from "./speak";
 
 export type AnswerLog = { itemId: number; correct: boolean; term: string; meaning: string };
+
+const COMBO_STEPS: Record<number, string> = {
+  3: "3 câu đúng liên tiếp",
+  5: "5 câu liên tiếp, đang vào guồng",
+  10: "10 câu không sai, quá đỉnh",
+  15: "15 câu liên tiếp, không gì cản nổi",
+  20: "20 câu liên tiếp, phong độ hiệp sĩ",
+};
+
+/** Counts correct answers in a row and pops a small badge at 3, 5, 10... */
+export function useCombo() {
+  const [combo, setCombo] = useState(0);
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
+  const { fx } = useCelebrate();
+
+  const hit = (correct: boolean) => {
+    const next = correct ? combo + 1 : 0;
+    setCombo(next);
+    const text = COMBO_STEPS[next];
+    if (text) {
+      const id = Date.now();
+      setToast({ id, text });
+      fx(next >= 10 ? "perfect" : "small");
+      setTimeout(() => setToast((t) => (t?.id === id ? null : t)), 1800);
+    }
+  };
+
+  const element = toast ? (
+    <div
+      key={toast.id}
+      className="pointer-events-none fixed inset-x-0 top-20 z-[70] flex justify-center px-4 animate-pop"
+      role="status"
+    >
+      <span className="flex items-center gap-2 rounded-full border-[1.5px] border-accent-deep bg-accent px-4 py-2 text-sm font-bold text-accent-ink shadow-[0_4px_0_var(--accent-deep)]">
+        <span className="font-mono">x{combo}</span>
+        {toast.text}
+      </span>
+    </div>
+  ) : null;
+
+  return { hit, element };
+}
 
 export function ProgressBar({ value, max }: { value: number; max: number }) {
   return (
@@ -38,6 +81,17 @@ export function ResultSummary({
   const pct = log.length ? Math.round((correct / log.length) * 100) : 0;
   const wrong = log.filter((l) => !l.correct);
   const verdict = pct === 100 ? "Hoàn hảo" : pct >= 80 ? "Rất tốt" : pct >= 50 ? "Khá ổn" : "Cần ôn thêm";
+  const quote = pickQuote(
+    pct === 100 ? "perfect" : pct >= 60 ? "good" : "tryAgain",
+    log.reduce((a, l) => a + l.itemId, log.length),
+  );
+  const { fx } = useCelebrate();
+  const perfect = pct === 100 && log.length >= 3;
+
+  useEffect(() => {
+    if (perfect) fx("perfect");
+  }, [perfect, fx]);
+
   return (
     <div className="animate-rise text-center">
       <div className="relative mx-auto grid size-36 place-items-center">
@@ -60,11 +114,12 @@ export function ResultSummary({
           <div className="text-xs font-semibold text-muted">điểm</div>
         </div>
       </div>
-      <h3 className="mt-4 text-2xl font-extrabold">{verdict}</h3>
+      <h3 className={`mt-4 text-2xl font-extrabold ${perfect ? "animate-pop" : ""}`}>{verdict}</h3>
       <p className="mt-1 text-muted">
         Đúng {correct}/{log.length} câu
         {wrong.length > 0 && ` · ${wrong.length} từ sai đã được ưu tiên vào danh sách ôn tập`}
       </p>
+      <QuoteBlock quote={quote} className="mx-auto mt-5 max-w-md" />
       {wrong.length > 0 && (
         <ul className="mx-auto mt-5 max-w-md divide-y-[1.5px] divide-line rounded-2xl border-[1.5px] border-line text-left">
           {wrong.map((w) => (
@@ -110,6 +165,7 @@ export function QuizSession({
   const [saving, startSaving] = useTransition();
   const [done, setDone] = useState(false);
   const { celebrate, burst } = useCelebrate();
+  const combo = useCombo();
   const choiceRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const q = questions[index];
@@ -131,6 +187,7 @@ export function QuizSession({
     setShowReading(true);
     setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning }]);
     if (correct) burst(choiceRefs.current[i]);
+    combo.hit(correct);
   };
 
   const next = () => {
@@ -162,6 +219,7 @@ export function QuizSession({
 
   return (
     <div>
+      {combo.element}
       <div className="flex items-center gap-3">
         <ProgressBar value={index + (answered ? 1 : 0)} max={questions.length} />
         <span className="font-mono text-sm tabular-nums text-muted">

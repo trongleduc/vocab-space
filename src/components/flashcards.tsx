@@ -8,7 +8,7 @@ import type { QuizQuestion } from "@/lib/queries";
 import { shuffle } from "@/lib/text";
 import { useCelebrate } from "./celebrate";
 import { Highlighted } from "./example";
-import { ProgressBar, QuizSession, ResultSummary, type AnswerLog } from "./quiz";
+import { ProgressBar, QuizSession, ResultSummary, useCombo, type AnswerLog } from "./quiz";
 import { SpeakButton } from "./speak";
 
 function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech: string; onRestart: () => void }) {
@@ -18,6 +18,7 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
   const [done, setDone] = useState(false);
   const [saving, startSaving] = useTransition();
   const { celebrate, burst } = useCelebrate();
+  const combo = useCombo();
   const router = useRouter();
 
   const card = cards[index];
@@ -28,6 +29,7 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
     const nextLog = [...log, { itemId: card.id, correct, term: card.term, meaning: card.meaning }];
     setLog(nextLog);
     if (correct) burst(el);
+    combo.hit(correct);
     if (index + 1 >= cards.length) {
       setDone(true);
       startSaving(async () => {
@@ -62,6 +64,7 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
 
   return (
     <div className="mx-auto max-w-xl">
+      {combo.element}
       <div className="mb-5 flex items-center gap-3">
         <ProgressBar value={index} max={cards.length} />
         <span className="font-mono text-sm tabular-nums text-muted">

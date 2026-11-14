@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { submitAnswers } from "@/app/actions/learn";
 import type { ClozeQuestion } from "@/lib/queries";
 import { useCelebrate } from "./celebrate";
-import { ProgressBar, ResultSummary, type AnswerLog } from "./quiz";
+import { ProgressBar, ResultSummary, useCombo, type AnswerLog } from "./quiz";
 import { speak } from "./speak";
 
 /** Fill-in-the-blank exercise built from example sentences. */
@@ -19,6 +19,7 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
   const [round, setRound] = useState(0);
   const [saving, startSaving] = useTransition();
   const { celebrate, burst } = useCelebrate();
+  const combo = useCombo();
   const router = useRouter();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -31,6 +32,7 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
     setPicked(choice);
     setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning }]);
     if (correct) burst(refs.current[i]);
+    combo.hit(correct);
     speak(q.before + q.answer + q.after, speech);
   };
 
@@ -83,6 +85,7 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
 
   return (
     <div className="mx-auto max-w-2xl" key={round}>
+      {combo.element}
       <div className="mb-6 flex items-center gap-3">
         <ProgressBar value={index + (answered ? 1 : 0)} max={questions.length} />
         <span className="font-mono text-sm tabular-nums text-muted">

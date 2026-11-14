@@ -114,7 +114,11 @@ export function rankFor(learned: number, scale: RankScale): Rank {
 
 /* ---------- Celebrations ---------- */
 
-export type Celebration = { type: "streak"; days: number } | { type: "milestone"; count: number };
+export type Celebration =
+  | { type: "streak"; days: number; tierUp?: { index: number; name: string } }
+  | { type: "milestone"; count: number }
+  | { type: "goal"; lang: Lang; count: number }
+  | { type: "rank"; lang: Lang; level: string; title: string; color: string; index: number };
 
 export function crossedMilestones(before: number, after: number, milestones: number[]) {
   return milestones.filter((m) => before < m && after >= m);
