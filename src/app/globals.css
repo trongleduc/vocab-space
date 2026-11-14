@@ -1,26 +1,327 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f0f0ed;
+  --line: #e4e4e0;
+  --ink: #121212;
+  --muted: #6d6d68;
+  --good: #2f9e44;
+  --bad: #e03131;
+  --accent: var(--ink);
+  --accent-ink: var(--surface);
+  --shadow-press: color-mix(in oklab, var(--ink) 18%, transparent);
+  color-scheme: light;
 }
+
+[data-theme="dark"] {
+  --bg: #0c0c0c;
+  --surface: #161616;
+  --surface-2: #1e1e1e;
+  --line: #2a2a2a;
+  --ink: #f1f1ef;
+  --muted: #9b9b96;
+  --good: #51cf66;
+  --bad: #ff6b6b;
+  --shadow-press: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+/* Accent follows the streak tier. Tier 0 stays black/white. */
+[data-tier="1"] { --accent: #e8a317; --accent-ink: #1d1400; }
+[data-tier="2"] { --accent: #f2711c; --accent-ink: #ffffff; }
+[data-tier="3"] { --accent: #e03131; --accent-ink: #ffffff; }
+[data-tier="4"] { --accent: #d6336c; --accent-ink: #ffffff; }
+[data-tier="5"] { --accent: #7048e8; --accent-ink: #ffffff; }
+[data-tier="6"] { --accent: #1c7ed6; --accent-ink: #ffffff; }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-deep: var(--accent-deep);
+  --font-sans: var(--font-vn), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+  --font-han: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Registered so the accent can animate between streak tiers. */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #121212;
+}
+
+/* Derived colours must be computed where --accent is set, so they live on the scope too. */
+:root,
+.accent-scope {
+  --accent-soft: color-mix(in oklab, var(--accent) 13%, var(--surface));
+  --accent-deep: color-mix(in oklab, var(--accent) 72%, black);
+}
+[data-theme="dark"],
+[data-theme="dark"] .accent-scope {
+  --accent-deep: color-mix(in oklab, var(--accent) 55%, black);
+}
+[data-theme="dark"] [data-tier="0"] {
+  --accent-deep: #8a8a86;
+}
+
+.accent-scope {
+  transition: --accent 900ms ease;
+}
+
+.han {
+  font-family: var(--font-han);
+}
+
+/* ---------- Pressable "floating" buttons ---------- */
+
+.btn {
+  --btn-bg: var(--surface);
+  --btn-fg: var(--ink);
+  --btn-edge: var(--line);
+  --btn-drop: var(--line);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: 14px;
+  border: 1.5px solid var(--btn-edge);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1;
+  box-shadow: 0 4px 0 var(--btn-drop);
+  transform: translateY(0);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease;
+  user-select: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 var(--btn-drop);
+}
+.btn:active,
+.btn[data-pressed="true"] {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--btn-drop);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 0 var(--btn-drop);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.btn-primary {
+  --btn-bg: var(--accent);
+  --btn-fg: var(--accent-ink);
+  --btn-edge: var(--accent-deep);
+  --btn-drop: var(--accent-deep);
+}
+.btn-good {
+  --btn-bg: var(--good);
+  --btn-fg: #fff;
+  --btn-edge: color-mix(in oklab, var(--good) 70%, black);
+  --btn-drop: color-mix(in oklab, var(--good) 70%, black);
+}
+.btn-bad {
+  --btn-bg: var(--surface);
+  --btn-fg: var(--bad);
+  --btn-edge: color-mix(in oklab, var(--bad) 45%, var(--line));
+  --btn-drop: color-mix(in oklab, var(--bad) 45%, var(--line));
+}
+.btn-ghost {
+  --btn-bg: transparent;
+  --btn-edge: transparent;
+  --btn-drop: transparent;
+  box-shadow: none;
+}
+.btn-ghost:hover {
+  --btn-bg: var(--surface-2);
+  box-shadow: none;
+}
+.btn-sm {
+  min-height: 2.25rem;
+  padding: 0 0.8rem;
+  font-size: 0.85rem;
+  border-radius: 11px;
+  box-shadow: 0 3px 0 var(--btn-drop);
+}
+.btn-icon {
+  padding: 0;
+  width: 2.75rem;
+}
+.btn-sm.btn-icon {
+  width: 2.25rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 22px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+.chip:hover {
+  color: var(--ink);
+  border-color: color-mix(in oklab, var(--ink) 30%, var(--line));
+}
+.chip[data-active="true"] {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.field {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.95rem;
+  transition: border-color 150ms ease;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+textarea.field {
+  min-height: 6rem;
+  line-height: 1.5;
+}
+
+mark.target {
+  background: var(--accent-soft);
+  color: inherit;
+  border-radius: 6px;
+  padding: 0 0.2em;
+  font-weight: 600;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+@keyframes flicker {
+  0%, 100% { transform: scaleY(1) translateY(0); }
+  50% { transform: scaleY(1.06) translateY(-1px); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes ring {
+  from { transform: scale(0.8); opacity: 0.7; }
+  to { transform: scale(1.8); opacity: 0; }
+}
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-pop { animation: pop-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.animate-rise { animation: rise 320ms ease both; }
+.animate-shake { animation: shake 380ms ease; }
+.animate-flicker { animation: flicker 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.animate-bob { animation: bob 2.4s ease-in-out infinite; }
+.animate-ring { animation: ring 1.6s ease-out infinite; }
+.check-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw 350ms 80ms ease forwards; }
+
+.flip {
+  perspective: 1200px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 500ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.flip[data-flipped="true"] .flip-inner {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }
