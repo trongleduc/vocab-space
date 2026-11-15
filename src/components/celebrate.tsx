@@ -5,6 +5,7 @@ import type { Celebration } from "@/lib/gamification";
 import { LANGS } from "@/lib/langs";
 import { pickQuote, type Quote, type QuoteCategory } from "@/lib/quotes";
 import { FlameIcon, KnightIcon } from "./icons";
+import { useModalViewport } from "./use-modal-viewport";
 
 export type Effect = "streak" | "milestone" | "rank" | "goal" | "perfect" | "small";
 
@@ -248,6 +249,7 @@ export function CelebrationProvider({ tier, children }: { tier: number; children
   }, []);
 
   const current = queue[0];
+  useModalViewport(Boolean(current));
 
   // Each card plays its own effect when it appears.
   useEffect(() => {
@@ -262,7 +264,7 @@ export function CelebrationProvider({ tier, children }: { tier: number; children
       {children}
       {current && (
         <div
-          className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4 backdrop-blur-sm animate-rise"
+          className="fixed inset-0 z-[80] grid place-items-center overscroll-contain bg-black/45 p-4 backdrop-blur-sm animate-rise"
           role="dialog"
           aria-modal="true"
           onClick={next}

@@ -52,14 +52,20 @@ export function UserRow({
   );
   const toggle = (panel: "password" | "rename") => setOpen((o) => (o === panel ? "none" : panel));
 
+  // Narrow card: 6-column grid → [Đổi tên][Mật khẩu] / [Cấp admin][Khóa][Xóa]. Wide card: 5 equal columns.
+  // Sized by the card (container query), not the viewport, so it holds in the narrow column next to the sidebar too.
+  const wide = "@lg:col-span-1 px-2 whitespace-nowrap";
+  const toggleBtn = (panel: "password" | "rename") =>
+    `btn btn-sm w-full col-span-3 ${wide} ${open === panel ? "btn-primary" : ""}`;
+
   return (
-    <div className={`p-4 ${user.active ? "" : "opacity-60"}`}>
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-full bg-surface-2 font-bold">
+    <div className="@container p-4">
+      <div className={`flex items-start gap-3 ${user.active ? "" : "opacity-60"}`}>
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 font-bold">
           {user.name.slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-semibold">{user.name}</span>
             {user.role === "admin" && (
               <span className="rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-bold text-surface">Admin</span>
@@ -72,42 +78,42 @@ export function UserRow({
           </p>
           {open === "none" && renameState?.ok && <p className="text-sm font-medium text-good">{renameState.ok}</p>}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <button className="btn btn-sm" onClick={() => toggle("rename")}>
-            <PencilLine size={14} /> Đổi tên
-          </button>
-          <button className="btn btn-sm" onClick={() => toggle("password")}>
-            <KeyRound size={14} /> Mật khẩu
-          </button>
-          {!isMe && (
-            <>
-              <button
-                className="btn btn-sm"
-                disabled={pending}
-                onClick={() => start(() => updateUser(user.id, { role: user.role === "admin" ? "member" : "admin" }))}
-              >
-                {user.role === "admin" ? "Hạ quyền" : "Cấp admin"}
-              </button>
-              <button
-                className="btn btn-sm"
-                disabled={pending}
-                onClick={() => start(() => updateUser(user.id, { active: !user.active }))}
-              >
-                {user.active ? "Khóa" : "Mở khóa"}
-              </button>
-              <button
-                className="btn btn-sm btn-bad btn-icon"
-                aria-label="Xóa"
-                disabled={pending}
-                onClick={() => {
-                  if (confirm(`Xóa tài khoản ${user.name} và toàn bộ tiến độ học?`)) start(() => deleteUser(user.id));
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </>
-          )}
-        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-6 gap-1.5 @lg:grid-cols-5">
+        <button className={toggleBtn("rename")} aria-expanded={open === "rename"} onClick={() => toggle("rename")}>
+          <PencilLine size={14} /> Đổi tên
+        </button>
+        <button className={toggleBtn("password")} aria-expanded={open === "password"} onClick={() => toggle("password")}>
+          <KeyRound size={14} /> Mật khẩu
+        </button>
+        {!isMe && (
+          <>
+            <button
+              className={`btn btn-sm w-full col-span-2 ${wide}`}
+              disabled={pending}
+              onClick={() => start(() => updateUser(user.id, { role: user.role === "admin" ? "member" : "admin" }))}
+            >
+              {user.role === "admin" ? "Hạ quyền" : "Cấp admin"}
+            </button>
+            <button
+              className={`btn btn-sm w-full col-span-2 ${wide}`}
+              disabled={pending}
+              onClick={() => start(() => updateUser(user.id, { active: !user.active }))}
+            >
+              {user.active ? "Khóa" : "Mở khóa"}
+            </button>
+            <button
+              className={`btn btn-sm btn-bad w-full col-span-2 ${wide}`}
+              disabled={pending}
+              onClick={() => {
+                if (confirm(`Xóa tài khoản ${user.name} và toàn bộ tiến độ học?`)) start(() => deleteUser(user.id));
+              }}
+            >
+              <Trash2 size={14} /> Xóa
+            </button>
+          </>
+        )}
       </div>
       {open === "rename" && (
         <form action={renameAction} className="mt-3 flex flex-wrap gap-2 animate-rise">

@@ -60,6 +60,22 @@
 
 html {
   background: var(--bg);
+  /* No double-tap-to-zoom: quick taps in quizzes and on modal buttons zoomed the page on iOS and
+     hid the fixed bottom nav behind the address bar. Pinch-to-zoom still works. */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS zooms into any focused field under 16px and does not zoom back out. Unlayered and
+   !important so it also beats Tailwind size utilities such as text-sm on a field. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea,
+  .field {
+    font-size: 16px !important;
+  }
 }
 
 body {

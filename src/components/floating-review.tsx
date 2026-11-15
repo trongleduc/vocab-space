@@ -7,6 +7,7 @@ import { fetchReview } from "@/app/actions/learn";
 import { speechOfKind } from "@/lib/langs";
 import type { QuizQuestion } from "@/lib/queries";
 import { QuizSession } from "./quiz";
+import { useModalViewport } from "./use-modal-viewport";
 
 const speech = (q: QuizQuestion) => speechOfKind(q.kind);
 
@@ -67,19 +68,17 @@ export function ReviewPanel({ due, onClose, lang }: { due: number; onClose?: () 
 export function FloatingReview({ due, hasLearned }: { due: number; hasLearned: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const hidden = !hasLearned || pathname.startsWith("/review") || pathname.startsWith("/admin");
 
+  useModalViewport(open && !hidden);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (!hasLearned || pathname.startsWith("/review") || pathname.startsWith("/admin")) return null;
+  if (hidden) return null;
 
   return (
     <>
@@ -101,14 +100,14 @@ export function FloatingReview({ due, hasLearned }: { due: number; hasLearned: b
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[2px] sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-black/40 backdrop-blur-[2px] sm:items-center sm:p-4"
           onClick={() => setOpen(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Ôn tập ngắt quãng"
-            className="card max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-b-none p-5 animate-rise sm:rounded-b-[22px] sm:p-7"
+            className="card max-h-[92dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-b-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-rise sm:rounded-b-[22px] sm:p-7"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
