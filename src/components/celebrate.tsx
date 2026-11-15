@@ -139,11 +139,12 @@ function originOf(el?: HTMLElement | null) {
 }
 
 export function QuoteBlock({ quote, className = "" }: { quote: Quote; className?: string }) {
-  const han = quote.original ? /[㐀-鿿]/.test(quote.original) : false;
+  const o = quote.original ?? "";
+  const font = /[가-힣]/.test(o) ? "ko" : /[぀-ヿ]/.test(o) ? "ja" : /[㐀-鿿]/.test(o) ? "han" : "";
   return (
     <figure className={`rounded-2xl bg-surface-2 px-4 py-3 text-left ${className}`}>
       {quote.original && (
-        <p className={`font-semibold ${han ? "han text-lg" : "italic"}`}>{han ? quote.original : `“${quote.original}”`}</p>
+        <p className={`font-semibold ${font ? `${font} text-lg` : "italic"}`}>{font ? quote.original : `“${quote.original}”`}</p>
       )}
       {quote.reading && <p className="text-xs text-muted">{quote.reading}</p>}
       <p className={quote.original ? "mt-1 text-sm text-muted" : "text-sm font-medium"}>{quote.text}</p>

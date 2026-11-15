@@ -23,11 +23,7 @@ export default async function ExercisePage({ params, searchParams }: PageProps<"
       <PageHeader
         eyebrow={cfg.name}
         title="Bài tập điền từ"
-        description={
-          lang === "zh"
-            ? "Chọn chữ Hán đúng cho câu ví dụ để quen mặt chữ. Câu sai được đưa vào danh sách ôn tập."
-            : "Chọn từ đúng cho câu ví dụ. Câu sai được đưa vào danh sách ôn tập."
-        }
+        description={cfg.exerciseDescription}
       />
       <PracticeFilters base={`/${lang}/exercise`} sp={sp} levels={cfg.levels} />
       {questions.length === 0 ? (
@@ -35,7 +31,7 @@ export default async function ExercisePage({ params, searchParams }: PageProps<"
           Bài tập được tạo từ câu ví dụ của các từ bạn đã học. Hãy học thêm vài từ hoặc đổi nguồn câu hỏi.
         </EmptyState>
       ) : (
-        <Cloze key={`${source}-${level}`} questions={questions} speech={cfg.speech} han={lang === "zh"} />
+        <Cloze key={`${source}-${level}`} questions={questions} speech={cfg.speech} font={cfg.font} />
       )}
     </div>
   );

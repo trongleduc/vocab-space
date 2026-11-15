@@ -10,7 +10,8 @@ import { ProgressBar, ResultSummary, useCombo, type AnswerLog } from "./quiz";
 import { speak } from "./speak";
 
 /** Fill-in-the-blank exercise built from example sentences. */
-export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; speech: string; han: boolean }) {
+/** `font` is the script class for the language (han, ja, ko; "" for English). */
+export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[]; speech: string; font: string }) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [hint, setHint] = useState(false);
@@ -30,7 +31,7 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
     if (answered || !q) return;
     const correct = choice === q.term;
     setPicked(choice);
-    setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning }]);
+    setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning, font }]);
     if (correct) burst(refs.current[i]);
     combo.hit(correct);
     speak(q.before + q.answer + q.after, speech);
@@ -95,14 +96,14 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
 
       <div key={q.id} className="card animate-rise p-6 sm:p-8">
         <p className="mb-4 text-sm font-semibold text-muted">Điền từ phù hợp vào chỗ trống</p>
-        <p className={`leading-loose ${han ? "han text-2xl sm:text-3xl" : "text-xl sm:text-2xl"}`}>
+        <p className={`leading-loose ${font ? `${font} text-2xl sm:text-3xl` : "text-xl sm:text-2xl"}`}>
           {q.before}
           <span
             className={`mx-1 inline-block min-w-16 rounded-lg border-b-[3px] px-2 text-center font-bold transition ${
               !answered ? "border-ink/40 text-transparent" : right ? "border-good bg-good/10 text-good animate-pop" : "border-bad bg-bad/10 text-bad"
             }`}
           >
-            {answered ? q.answer : han ? "　　" : "____"}
+            {answered ? q.answer : font ? "　　" : "____"}
           </span>
           {q.after}
         </p>
@@ -129,7 +130,7 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
               }}
               onClick={() => pick(c, i)}
               disabled={answered && state === "dim"}
-              className={`btn h-16 ${han ? "han text-2xl" : "text-lg"} ${
+              className={`btn h-16 ${font ? `${font} text-2xl` : "text-lg"} ${
                 state === "right" ? "btn-good animate-pop" : state === "wrong" ? "btn-bad animate-shake" : ""
               }`}
             >
@@ -142,7 +143,7 @@ export function Cloze({ questions, speech, han }: { questions: ClozeQuestion[]; 
       {answered && (
         <div className="mt-5 animate-rise">
           <p className="text-center text-sm text-muted">
-            <span className={`font-semibold ${han ? "han" : ""}`}>{q.term}</span>
+            <span className={`font-semibold ${font}`}>{q.term}</span>
             {q.reading && ` · ${q.reading}`} · {q.meaning}
           </p>
           <button className="btn btn-primary mt-4 w-full" onClick={next} autoFocus>

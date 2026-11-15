@@ -54,6 +54,8 @@
   --font-sans: var(--font-vn), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, monospace;
   --font-han: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+  --font-ja: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic", "Meiryo", "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
+  --font-ko: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", sans-serif;
 }
 
 html {
@@ -93,6 +95,14 @@ body {
 
 .han {
   font-family: var(--font-han);
+}
+
+.ja {
+  font-family: var(--font-ja);
+}
+
+.ko {
+  font-family: var(--font-ko);
 }
 
 /* ---------- Pressable "floating" buttons ---------- */

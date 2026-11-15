@@ -4,10 +4,11 @@ import { BellRing, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { fetchReview } from "@/app/actions/learn";
+import { speechOfKind } from "@/lib/langs";
 import type { QuizQuestion } from "@/lib/queries";
 import { QuizSession } from "./quiz";
 
-const speech = (q: QuizQuestion) => (q.kind.startsWith("zh") ? "zh-CN" : "en-US");
+const speech = (q: QuizQuestion) => speechOfKind(q.kind);
 
 export function ReviewPanel({ due, onClose, lang }: { due: number; onClose?: () => void; lang?: string }) {
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);

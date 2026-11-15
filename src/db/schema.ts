@@ -12,14 +12,14 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { ITEM_KINDS, type ItemKind } from "@/lib/kinds";
+import { DEFAULT_LANGS, ITEM_KINDS, type ItemKind, type Lang } from "@/lib/kinds";
 
 export { ITEM_KINDS, type ItemKind };
 
 export type Example = {
   /** Sentence. Wrap the target word in [brackets] so it can be highlighted and blanked out. */
   text: string;
-  /** Pinyin for Chinese, optional for English. */
+  /** Pinyin (Chinese), romanization (Korean, Japanese); optional for English. */
   reading?: string;
   /** Vietnamese translation. */
   translation: string;
@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: ["admin", "member"] }).notNull().default("member"),
   active: boolean("active").notNull().default(true),
+  /** Languages the member is learning; drives nav, dashboard and the review queue. */
+  langs: jsonb("langs").$type<Lang[]>().notNull().default(DEFAULT_LANGS),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -53,11 +55,11 @@ export const items = pgTable(
     id: serial("id").primaryKey(),
     kind: text("kind", { enum: ITEM_KINDS }).notNull(),
     term: text("term").notNull(),
-    /** Pinyin (Chinese) or IPA (English). */
+    /** Pinyin (Chinese), IPA (English), romanization (Korean), "kana · romaji" (Japanese). */
     reading: text("reading"),
     /** Vietnamese meaning. */
     meaning: text("meaning").notNull(),
-    /** HSK1..HSK6, HSK7-9 for Chinese; B1..C2 for English. */
+    /** HSK1..HSK7-9 (Chinese), B1..C2 (English), TOPIK1..TOPIK6 (Korean), N5..N1 (Japanese). */
     level: text("level"),
     topic: text("topic"),
     pos: text("pos"),
@@ -66,7 +68,7 @@ export const items = pgTable(
     /** Usage note, e.g. when a daily phrase is appropriate. */
     note: text("note"),
     examples: jsonb("examples").$type<Example[]>().notNull().default([]),
-    /** First letter used for A–Z browsing (pinyin without tones for Chinese). */
+    /** Browse letter: A–Z (pinyin without tones for Chinese), initial consonant ㄱ ㄴ… (Korean), kana row あ か… (Japanese). */
     letter: text("letter"),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

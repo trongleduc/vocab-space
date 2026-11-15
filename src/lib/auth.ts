@@ -6,13 +6,14 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
 import { db, schema } from "@/db";
+import { normalizeLangs, type Lang } from "./kinds";
 
 export const SESSION_COOKIE = "vs_session";
 const SESSION_DAYS = 30;
 
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 
-export type SessionUser = { id: number; name: string; role: "admin" | "member" };
+export type SessionUser = { id: number; name: string; role: "admin" | "member"; langs: Lang[] };
 
 export async function createSession(userId: number) {
   const token = randomBytes(32).toString("base64url");
@@ -41,7 +42,7 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const [row] = await db
-    .select({ id: schema.users.id, name: schema.users.name, role: schema.users.role })
+    .select({ id: schema.users.id, name: schema.users.name, role: schema.users.role, langs: schema.users.langs })
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
     .where(
@@ -52,7 +53,7 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
       ),
     )
     .limit(1);
-  return row ?? null;
+  return row ? { ...row, langs: normalizeLangs(row.langs) } : null;
 });
 
 export async function requireUser() {

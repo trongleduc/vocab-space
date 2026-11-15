@@ -4,6 +4,7 @@ import { RotateCw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { submitAnswers } from "@/app/actions/learn";
+import { fontOfKind } from "@/lib/langs";
 import type { QuizQuestion } from "@/lib/queries";
 import { shuffle } from "@/lib/text";
 import { useCelebrate } from "./celebrate";
@@ -22,11 +23,12 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
   const router = useRouter();
 
   const card = cards[index];
-  const han = card?.kind.startsWith("zh");
+  const font = card ? fontOfKind(card.kind) : "";
+  const long = (card?.term.length ?? 0) > 4;
 
   const grade = (correct: boolean, el?: HTMLElement | null) => {
     if (!card || !flipped) return;
-    const nextLog = [...log, { itemId: card.id, correct, term: card.term, meaning: card.meaning }];
+    const nextLog = [...log, { itemId: card.id, correct, term: card.term, meaning: card.meaning, font }];
     setLog(nextLog);
     if (correct) burst(el);
     combo.hit(correct);
@@ -80,7 +82,9 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
             className="flip-face card grid min-h-80 w-full place-items-center p-8 text-center shadow-[0_6px_0_var(--line)]"
           >
             <div>
-              <p className={`font-bold tracking-tight ${han ? "han text-7xl" : "text-5xl"}`}>{card.term}</p>
+              <p className={`font-bold tracking-tight break-words ${font ? `${font} ${long ? "text-5xl" : "text-7xl"}` : "text-5xl"}`}>
+                {card.term}
+              </p>
               <p className="mt-6 inline-flex items-center gap-1.5 text-sm text-muted">
                 <RotateCw size={14} /> Chạm để lật thẻ
               </p>
@@ -88,7 +92,7 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
           </button>
           <div className="flip-face flip-back card flex flex-col items-center justify-center overflow-y-auto p-6 text-center shadow-[0_6px_0_var(--line)]">
             <div className="flex items-center gap-2">
-              <p className={`font-bold ${han ? "han text-4xl" : "text-3xl"}`}>{card.term}</p>
+              <p className={`font-bold ${font ? `${font} text-4xl` : "text-3xl"}`}>{card.term}</p>
               <SpeakButton text={card.term} lang={speech} />
             </div>
             {card.reading && <p className="mt-1 text-muted">{card.reading}</p>}
@@ -104,8 +108,8 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
             )}
             {card.example && (
               <div className="mt-4 w-full rounded-2xl bg-surface-2 p-3 text-left text-sm">
-                <div className={han ? "text-base" : ""}>
-                  <Highlighted text={card.example.text} han={han} />
+                <div className={font ? "text-base" : ""}>
+                  <Highlighted text={card.example.text} font={font} />
                 </div>
                 {card.example.reading && <div className="text-muted">{card.example.reading}</div>}
                 <div className="italic text-muted">{card.example.translation}</div>

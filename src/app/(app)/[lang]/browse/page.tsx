@@ -2,7 +2,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState, PageHeader } from "@/components/ui";
-import { WordCard } from "@/components/word-card";
+import { WordGrid } from "@/components/word-grid";
 import { requireUser } from "@/lib/auth";
 import { isLang, LANGS } from "@/lib/langs";
 import { browseItems, getFacets, getToday } from "@/lib/queries";
@@ -46,11 +46,7 @@ export default async function BrowsePage({ params, searchParams }: PageProps<"/[
       <PageHeader
         eyebrow={cfg.name}
         title="Thư viện"
-        description={
-          lang === "zh"
-            ? "Toàn bộ từ vựng theo cấp độ HSK 3.0, theo chủ đề hoặc theo chữ cái pinyin."
-            : "Từ vựng B1 trở lên theo cấp độ CEFR, theo chủ đề hoặc theo chữ cái."
-        }
+        description={cfg.browseDescription}
       />
 
       <div className="card mb-6 space-y-4 p-4 sm:p-5">
@@ -68,7 +64,7 @@ export default async function BrowsePage({ params, searchParams }: PageProps<"/[
             <input
               name="q"
               defaultValue={sp.q}
-              placeholder={lang === "zh" ? "Tìm chữ Hán, pinyin hoặc nghĩa" : "Tìm từ hoặc nghĩa"}
+              placeholder={cfg.searchPlaceholder}
               className="field min-h-10 pl-9"
             />
           </form>
@@ -120,7 +116,7 @@ export default async function BrowsePage({ params, searchParams }: PageProps<"/[
                 key={t ?? "all"}
                 href={href(lang, sp, { letter: t })}
                 data-active={sp.letter === t}
-                className={`chip font-mono ${t ? "w-9 justify-center px-0" : ""}`}
+                className={`chip ${t ? `w-9 justify-center px-0 ${/[A-Z#]/.test(t) ? "font-mono" : cfg.font}` : ""}`}
               >
                 {t ?? "Tất cả"}
               </Link>
@@ -130,15 +126,13 @@ export default async function BrowsePage({ params, searchParams }: PageProps<"/[
 
       <p className="mb-3 text-sm text-muted">{result.total} mục</p>
 
-      {result.items.length === 0 ? (
-        <EmptyState title="Không tìm thấy mục nào">Thử bỏ bớt bộ lọc hoặc tìm từ khác.</EmptyState>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {result.items.map((item) => (
-            <WordCard key={item.id} item={item} today={today} speech={cfg.speech} />
-          ))}
-        </div>
-      )}
+      <WordGrid
+        key={JSON.stringify([kind, sp.level, sp.topic, sp.letter, sp.q, status, result.page])}
+        items={result.items}
+        today={today}
+        speech={cfg.speech}
+        empty={<EmptyState title="Không tìm thấy mục nào">Thử bỏ bớt bộ lọc hoặc tìm từ khác.</EmptyState>}
+      />
 
       {result.pages > 1 && (
         <div className="mt-8 flex items-center justify-center gap-3">

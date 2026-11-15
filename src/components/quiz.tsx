@@ -3,13 +3,15 @@
 import { Check, Eye, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { submitAnswers } from "@/app/actions/learn";
+import { fontOfKind } from "@/lib/langs";
 import type { QuizQuestion } from "@/lib/queries";
 import { pickQuote } from "@/lib/quotes";
 import { QuoteBlock, useCelebrate } from "./celebrate";
 import { Highlighted } from "./example";
 import { SpeakButton } from "./speak";
 
-export type AnswerLog = { itemId: number; correct: boolean; term: string; meaning: string };
+/** `font` is the script class of the term (han, ja, ko) for the mistakes list. */
+export type AnswerLog = { itemId: number; correct: boolean; term: string; meaning: string; font?: string };
 
 const COMBO_STEPS: Record<number, string> = {
   3: "3 câu đúng liên tiếp",
@@ -124,7 +126,7 @@ export function ResultSummary({
         <ul className="mx-auto mt-5 max-w-md divide-y-[1.5px] divide-line rounded-2xl border-[1.5px] border-line text-left">
           {wrong.map((w) => (
             <li key={w.itemId} className="flex items-baseline justify-between gap-3 px-4 py-2.5">
-              <span className="han text-lg font-semibold">{w.term}</span>
+              <span className={`${w.font ?? ""} text-lg font-semibold`}>{w.term}</span>
               <span className="text-right text-sm text-muted">{w.meaning}</span>
             </li>
           ))}
@@ -170,7 +172,8 @@ export function QuizSession({
 
   const q = questions[index];
   const answered = picked !== null;
-  const isHan = q?.kind.startsWith("zh");
+  const font = q ? fontOfKind(q.kind) : "";
+  const long = (q?.term.length ?? 0) > 4;
 
   const finish = (finalLog: AnswerLog[]) => {
     setDone(true);
@@ -185,7 +188,7 @@ export function QuizSession({
     const correct = choice === q.meaning;
     setPicked(choice);
     setShowReading(true);
-    setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning }]);
+    setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning, font }]);
     if (correct) burst(choiceRefs.current[i]);
     combo.hit(correct);
   };
@@ -234,7 +237,9 @@ export function QuizSession({
           </span>
         )}
         <div className="flex items-center justify-center gap-3">
-          <h2 className={`${isHan ? "han text-6xl sm:text-7xl" : "text-4xl sm:text-5xl"} font-bold tracking-tight`}>
+          <h2
+            className={`${font ? `${font} ${long ? "text-4xl sm:text-5xl" : "text-6xl sm:text-7xl"}` : "text-4xl sm:text-5xl"} font-bold tracking-tight break-words`}
+          >
             {q.term}
           </h2>
           <SpeakButton text={q.term} lang={speech(q)} size="md" />
@@ -281,8 +286,8 @@ export function QuizSession({
         <div className="mt-6 animate-rise">
           {q.example && (
             <div className="rounded-2xl bg-surface-2 p-4 text-left">
-              <div className={isHan ? "text-lg" : ""}>
-                <Highlighted text={q.example.text} han={isHan} />
+              <div className={font ? "text-lg" : ""}>
+                <Highlighted text={q.example.text} font={font} />
               </div>
               {q.example.reading && <div className="text-sm text-muted">{q.example.reading}</div>}
               <div className="text-sm italic text-muted">{q.example.translation}</div>

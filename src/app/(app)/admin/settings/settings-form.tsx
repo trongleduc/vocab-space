@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { saveSettings } from "@/app/actions/admin";
 import { FormMessage } from "@/components/form-message";
+import { LANG_CODES, LANGS, type Lang } from "@/lib/langs";
 import type { AppSettings } from "@/lib/settings";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -17,7 +18,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 export function SettingsForm({ settings }: { settings: AppSettings }) {
   const [state, action, pending] = useActionState(saveSettings, undefined);
-  const scale = (l: "zh" | "en") => settings.rankScales[l].map((s) => `${s.level}: ${s.words}`).join("\n");
+  const scale = (l: Lang) => settings.rankScales[l].map((s) => `${s.level}: ${s.words}`).join("\n");
 
   return (
     <form action={action} className="grid gap-5 lg:grid-cols-2">
@@ -40,33 +41,48 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
       <section className="card space-y-4 p-5">
         <h2 className="font-bold">Lượng học mỗi ngày</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Từ tiếng Trung">
-            <input name="zh_word" type="number" min={0} max={100} defaultValue={settings.daily.zh_word} className="field" />
-          </Field>
-          <Field label="Câu thông dụng">
-            <input name="zh_phrase" type="number" min={0} max={100} defaultValue={settings.daily.zh_phrase} className="field" />
-          </Field>
-          <Field label="Từ tiếng Anh">
-            <input name="en_word" type="number" min={0} max={100} defaultValue={settings.daily.en_word} className="field" />
-          </Field>
-          <Field label="Idioms">
-            <input name="en_idiom" type="number" min={0} max={100} defaultValue={settings.daily.en_idiom} className="field" />
-          </Field>
+          {LANG_CODES.map((l) => {
+            const cfg = LANGS[l];
+            return (
+              <div key={l} className="contents">
+                <Field label={`Từ ${cfg.name.toLowerCase()}`}>
+                  <input
+                    name={cfg.wordKind}
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={settings.daily[cfg.wordKind]}
+                    className="field"
+                  />
+                </Field>
+                <Field label={`${cfg.extraLabel} (${cfg.short})`}>
+                  <input
+                    name={cfg.extraKind}
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={settings.daily[cfg.extraKind]}
+                    className="field"
+                  />
+                </Field>
+              </div>
+            );
+          })}
         </div>
       </section>
 
       <section className="card space-y-4 p-5 lg:col-span-2">
         <h2 className="font-bold">Thang xếp hạng hiệp sĩ</h2>
         <p className="text-sm text-muted">
-          Mỗi dòng: cấp độ: số từ tích lũy. Mặc định dùng số từ chính thức của HSK 3.0 và ước lượng phổ biến cho CEFR.
+          Mỗi dòng: cấp độ: số từ tích lũy. Mặc định dùng số từ chính thức của HSK 3.0; CEFR, TOPIK và JLPT là ước lượng
+          phổ biến.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tiếng Trung (HSK 3.0)">
-            <textarea name="rankZh" rows={8} defaultValue={scale("zh")} className="field font-mono text-sm" />
-          </Field>
-          <Field label="Tiếng Anh (CEFR)">
-            <textarea name="rankEn" rows={8} defaultValue={scale("en")} className="field font-mono text-sm" />
-          </Field>
+          {LANG_CODES.map((l) => (
+            <Field key={l} label={`${LANGS[l].name} (${LANGS[l].standard})`}>
+              <textarea name={`rank_${l}`} rows={8} defaultValue={scale(l)} className="field font-mono text-sm" />
+            </Field>
+          ))}
         </div>
       </section>
 

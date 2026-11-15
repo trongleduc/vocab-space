@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LearnAllButton } from "@/components/learn-all";
 import { Bar, EmptyState, PageHeader } from "@/components/ui";
-import { WordCard } from "@/components/word-card";
+import { WordGrid } from "@/components/word-grid";
 import { requireUser } from "@/lib/auth";
 import { isLang, LANGS } from "@/lib/langs";
 import { getDailyItems, getToday } from "@/lib/queries";
@@ -55,11 +55,7 @@ export default async function TodayPage({ params }: PageProps<"/[lang]">) {
           Bạn đã học hết kho từ hiện có. Quản trị viên có thể nhập thêm từ trong mục Quản trị.
         </EmptyState>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {words.items.map((item) => (
-            <WordCard key={item.id} item={item} today={today} speech={cfg.speech} />
-          ))}
-        </div>
+        <WordGrid key={`${cfg.wordKind}-${today}`} items={words.items} today={today} speech={cfg.speech} />
       )}
 
       {extras.items.length > 0 && (
@@ -73,11 +69,7 @@ export default async function TodayPage({ params }: PageProps<"/[lang]">) {
               Xem tất cả <ArrowRight size={15} />
             </Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {extras.items.map((item) => (
-              <WordCard key={item.id} item={item} today={today} speech={cfg.speech} />
-            ))}
-          </div>
+          <WordGrid key={`${cfg.extraKind}-${today}`} items={extras.items} today={today} speech={cfg.speech} />
         </section>
       )}
     </div>

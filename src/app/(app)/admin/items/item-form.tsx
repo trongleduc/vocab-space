@@ -11,6 +11,7 @@ export function ItemForm({ item, kind }: { item: Item | null; kind: ItemKind }) 
   const [state, action, pending] = useActionState(saveItem, undefined);
   const k = item?.kind ?? kind;
   const lang = langOfKind(k);
+  const cfg = LANGS[lang];
   const examples = (item?.examples ?? [])
     .map((e) => [e.text, e.reading ?? "", e.translation].join(" | "))
     .join("\n");
@@ -21,11 +22,16 @@ export function ItemForm({ item, kind }: { item: Item | null; kind: ItemKind }) 
       <input type="hidden" name="kind" value={k} />
       <label className="space-y-1">
         <span className="text-sm font-semibold">{k.endsWith("word") ? "Từ" : "Câu / cụm"}</span>
-        <input name="term" required defaultValue={item?.term} className={`field ${lang === "zh" ? "han" : ""}`} />
+        <input name="term" required defaultValue={item?.term} className={`field ${cfg.font}`} />
       </label>
       <label className="space-y-1">
-        <span className="text-sm font-semibold">{lang === "zh" ? "Pinyin" : "Phiên âm IPA"}</span>
-        <input name="reading" defaultValue={item?.reading ?? ""} className="field" />
+        <span className="text-sm font-semibold">{cfg.readingLabel}</span>
+        <input
+          name="reading"
+          defaultValue={item?.reading ?? ""}
+          placeholder={lang === "ja" ? "たべる · taberu" : undefined}
+          className={`field ${cfg.font}`}
+        />
       </label>
       <label className="space-y-1 sm:col-span-2">
         <span className="text-sm font-semibold">Nghĩa tiếng Việt</span>
@@ -35,7 +41,7 @@ export function ItemForm({ item, kind }: { item: Item | null; kind: ItemKind }) 
         <span className="text-sm font-semibold">Cấp độ</span>
         <input name="level" list={`levels-${lang}`} defaultValue={item?.level ?? ""} className="field" />
         <datalist id={`levels-${lang}`}>
-          {LANGS[lang].levels.map((l) => (
+          {cfg.levels.map((l) => (
             <option key={l} value={l} />
           ))}
         </datalist>
@@ -74,12 +80,8 @@ export function ItemForm({ item, kind }: { item: Item | null; kind: ItemKind }) 
           name="examples"
           defaultValue={examples}
           rows={4}
-          placeholder={
-            lang === "zh"
-              ? "我[喜欢]喝茶。 | Wǒ xǐhuan hē chá. | Tôi thích uống trà."
-              : "She [depends on] her parents. | | Cô ấy phụ thuộc vào bố mẹ."
-          }
-          className={`field font-mono text-sm ${lang === "zh" ? "han" : ""}`}
+          placeholder={cfg.examplePlaceholder}
+          className={`field font-mono text-sm ${cfg.font}`}
         />
         <span className="text-xs text-muted">
           Mỗi dòng một câu: câu | phiên âm | nghĩa. Bao từ cần điền trong bài tập bằng [ngoặc vuông].

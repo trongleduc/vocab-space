@@ -14,7 +14,7 @@ export default async function HistoryPage({ params }: PageProps<"/[lang]/history
   const cfg = LANGS[lang];
   const user = await requireUser();
   const [today, groups] = await Promise.all([getToday(), getHistory(user.id, [cfg.wordKind, cfg.extraKind], 60)]);
-  const han = lang === "zh";
+  const font = cfg.font;
 
   return (
     <div>
@@ -34,7 +34,7 @@ export default async function HistoryPage({ params }: PageProps<"/[lang]/history
                   <li key={item.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-x-2">
-                        <span className={`font-semibold ${han ? "han text-xl" : "text-[17px]"}`}>{item.term}</span>
+                        <span className={`font-semibold ${font ? `${font} text-xl` : "text-[17px]"}`}>{item.term}</span>
                         {item.reading && <span className="text-sm text-muted">{item.reading}</span>}
                       </div>
                       <p className="truncate text-sm text-muted">{item.meaning}</p>

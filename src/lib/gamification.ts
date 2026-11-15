@@ -66,7 +66,9 @@ export type RankScale = { level: string; words: number }[];
 
 /**
  * Cumulative vocabulary needed per level. HSK 3.0 numbers are the official word counts
- * (GF0025-2021); CEFR numbers are commonly cited vocabulary-size estimates.
+ * (GF0025-2021). CEFR, TOPIK and JLPT publish no official word lists, so those are commonly
+ * cited estimates (JLPT follows the old test specification: 800 / 1,500 / 6,000 / 10,000,
+ * with N3 in between). Admins can override all of them in settings.
  */
 export const DEFAULT_RANK_SCALES: Record<Lang, RankScale> = {
   zh: [
@@ -86,6 +88,21 @@ export const DEFAULT_RANK_SCALES: Record<Lang, RankScale> = {
     { level: "C1", words: 4500 },
     { level: "C1+", words: 6000 },
     { level: "C2", words: 8000 },
+  ],
+  ko: [
+    { level: "TOPIK1", words: 800 },
+    { level: "TOPIK2", words: 2000 },
+    { level: "TOPIK3", words: 3500 },
+    { level: "TOPIK4", words: 5000 },
+    { level: "TOPIK5", words: 6500 },
+    { level: "TOPIK6", words: 8000 },
+  ],
+  ja: [
+    { level: "N5", words: 800 },
+    { level: "N4", words: 1500 },
+    { level: "N3", words: 3750 },
+    { level: "N2", words: 6000 },
+    { level: "N1", words: 10000 },
   ],
 };
 

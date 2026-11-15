@@ -6,7 +6,8 @@ import { refresh, updateTag } from "next/cache";
 import { db, schema } from "@/db";
 import { ITEM_KINDS, type Example, type ItemKind } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import type { AppSettings } from "@/lib/settings";
+import { LANG_CODES, LANGS, langOfKind } from "@/lib/langs";
+import type { AppSettings, DailyQuota } from "@/lib/settings";
 import { letterOf } from "@/lib/text";
 import type { FormState } from "./auth";
 
@@ -106,7 +107,7 @@ function itemFromForm(fd: FormData) {
     note: str(fd, "note") || null,
     examples: parseExamples(str(fd, "examples")),
     sortOrder: Number(fd.get("sortOrder") || 0),
-    letter: letterOf(term, reading),
+    letter: letterOf(term, reading, langOfKind(kind)),
   };
 }
 
@@ -205,7 +206,7 @@ export async function importItems(_prev: FormState, fd: FormData): Promise<FormS
         prepositions: r.prepositions || null,
         note: r.note || null,
         examples: r.examples ?? [],
-        letter: letterOf(r.term, r.reading),
+        letter: letterOf(r.term, r.reading, langOfKind(kind)),
         sortOrder: 1000 + i + j,
       })),
     );
@@ -242,22 +243,20 @@ export async function saveSettings(_prev: FormState, fd: FormData): Promise<Form
   const value: AppSettings = {
     appName: str(fd, "appName") || "Vocab Space",
     timezone: str(fd, "timezone") || "Asia/Ho_Chi_Minh",
-    daily: {
-      zh_word: quota("zh_word"),
-      zh_phrase: quota("zh_phrase"),
-      en_word: quota("en_word"),
-      en_idiom: quota("en_idiom"),
-    },
+    daily: Object.fromEntries(ITEM_KINDS.map((k) => [k, quota(k)])) as DailyQuota,
     reviewBatch: Math.min(50, Math.max(3, Number(fd.get("reviewBatch") || 10))),
     milestones: nums(str(fd, "milestones")),
-    rankScales: { zh: parseScale(str(fd, "rankZh")), en: parseScale(str(fd, "rankEn")) },
+    rankScales: Object.fromEntries(
+      LANG_CODES.map((l) => [l, parseScale(str(fd, `rank_${l}`))]),
+    ) as AppSettings["rankScales"],
   };
   try {
     new Intl.DateTimeFormat("en", { timeZone: value.timezone });
   } catch {
     return { error: "Múi giờ không hợp lệ (ví dụ: Asia/Ho_Chi_Minh)." };
   }
-  if (!value.rankScales.zh.length || !value.rankScales.en.length) return { error: "Thang xếp hạng không được để trống." };
+  const emptyScale = LANG_CODES.find((l) => !value.rankScales[l].length);
+  if (emptyScale) return { error: `Thang xếp hạng ${LANGS[emptyScale].name} không được để trống.` };
   await Promise.all(
     Object.entries(value).map(([key, v]) =>
       db

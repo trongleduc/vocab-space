@@ -15,7 +15,7 @@ const mono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: { default: "Vocab Space", template: "%s · Vocab Space" },
-  description: "Học từ vựng tiếng Trung (HSK 3.0) và tiếng Anh (B1+) mỗi ngày.",
+  description: "Học từ vựng tiếng Trung (HSK 3.0), tiếng Anh (B1+), tiếng Hàn (TOPIK) và tiếng Nhật (JLPT) mỗi ngày.",
 };
 
 export const viewport: Viewport = {

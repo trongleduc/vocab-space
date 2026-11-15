@@ -19,6 +19,11 @@ async function main() {
   const { ZH_PHRASES } = await import("./seed-data/zh-phrases");
   const { EN_WORDS } = await import("./seed-data/en-words");
   const { EN_IDIOMS } = await import("./seed-data/en-idioms");
+  const { KO_WORDS } = await import("./seed-data/ko-words");
+  const { KO_PHRASES } = await import("./seed-data/ko-phrases");
+  const { JA_WORDS } = await import("./seed-data/ja-words");
+  const { JA_PHRASES } = await import("./seed-data/ja-phrases");
+  const { ITEM_KINDS } = await import("../lib/kinds");
   type NewItem = typeof schema.items.$inferInsert;
 
   // ----- Admin -----
@@ -77,10 +82,42 @@ async function main() {
       examples: ex.map(([text, translation]) => ({ text, translation })),
       sortOrder: i,
     })),
-  ].map((it: NewItem) => ({ ...it, letter: letterOf(it.term, it.reading) }));
+    ...([
+      ["ko", KO_WORDS],
+      ["ja", JA_WORDS],
+    ] as const).flatMap(([lang, rows]) =>
+      rows.map(([term, reading, meaning, level, topic, pos, note, ex], i) => ({
+        kind: `${lang}_word` as const,
+        term,
+        reading,
+        meaning,
+        level,
+        topic,
+        pos,
+        note: note || null,
+        examples: ex.map(([text, r, translation]) => ({ text, reading: r, translation })),
+        sortOrder: i,
+      })),
+    ),
+    ...([
+      ["ko", KO_PHRASES],
+      ["ja", JA_PHRASES],
+    ] as const).flatMap(([lang, rows]) =>
+      rows.map(([term, reading, meaning, topic, note], i) => ({
+        kind: `${lang}_phrase` as const,
+        term,
+        reading,
+        meaning,
+        topic,
+        note: note || null,
+        pos: "câu",
+        sortOrder: i,
+      })),
+    ),
+  ].map((it: NewItem) => ({ ...it, letter: letterOf(it.term, it.reading, it.kind.slice(0, 2)) }));
 
   let added = 0;
-  for (const kind of ["zh_word", "zh_phrase", "en_word", "en_idiom"] as const) {
+  for (const kind of ITEM_KINDS) {
     const existing = new Set(
       (await db.select({ term: schema.items.term }).from(schema.items).where(eq(schema.items.kind, kind))).map((r) => r.term),
     );

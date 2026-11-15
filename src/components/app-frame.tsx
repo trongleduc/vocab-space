@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import type { Rank } from "@/lib/gamification";
+import { LANGS, type Lang } from "@/lib/langs";
 import { CelebrationProvider } from "./celebrate";
 import { FloatingReview } from "./floating-review";
 import { FlameIcon, KnightIcon } from "./icons";
@@ -17,26 +18,39 @@ export type FrameStats = {
   tierName: string;
   dueTotal: number;
   total: number;
-  ranks: { zh: Rank; en: Rank };
+  /** Languages the user is learning, in display order. */
+  langs: Lang[];
+  ranks: Record<Lang, Rank>;
 };
 
-type NavItem = { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean };
+type NavItem = {
+  href: string;
+  label: string;
+  /** Shorter label for the mobile bottom nav. */
+  short?: string;
+  icon: React.ReactNode;
+  match: (p: string) => boolean;
+};
 
-function nav(isAdmin: boolean): NavItem[] {
+export function LangGlyph({ lang, className = "" }: { lang: Lang; className?: string }) {
+  const cfg = LANGS[lang];
+  return cfg.font ? (
+    <span className={`${cfg.font} text-[17px] font-semibold leading-none ${className}`}>{cfg.short}</span>
+  ) : (
+    <span className={`text-[13px] font-bold leading-none tracking-tight ${className}`}>{cfg.short}</span>
+  );
+}
+
+function nav(isAdmin: boolean, langs: Lang[]): NavItem[] {
   const items: NavItem[] = [
     { href: "/", label: "Tổng quan", icon: <Home size={20} />, match: (p) => p === "/" },
-    {
-      href: "/zh",
-      label: "Tiếng Trung",
-      icon: <span className="han text-[17px] font-semibold leading-none">中</span>,
-      match: (p) => p.startsWith("/zh"),
-    },
-    {
-      href: "/en",
-      label: "Tiếng Anh",
-      icon: <span className="text-[13px] font-bold leading-none tracking-tight">EN</span>,
-      match: (p) => p.startsWith("/en"),
-    },
+    ...langs.map((l) => ({
+      href: `/${l}`,
+      label: LANGS[l].name,
+      short: langs.length > 2 ? LANGS[l].navLabel : LANGS[l].name,
+      icon: <LangGlyph lang={l} />,
+      match: (p: string) => p === `/${l}` || p.startsWith(`/${l}/`),
+    })),
     { href: "/review", label: "Ôn tập", icon: <RotateCcw size={20} />, match: (p) => p.startsWith("/review") },
     { href: "/account", label: "Hồ sơ", icon: <UserRound size={20} />, match: (p) => p.startsWith("/account") },
   ];
@@ -78,15 +92,15 @@ export function StreakBadge({ stats, compact = false }: { stats: FrameStats; com
 function RankBadges({ stats }: { stats: FrameStats }) {
   return (
     <div className="flex items-center gap-1">
-      {(["zh", "en"] as const).map((l) => (
+      {stats.langs.map((l) => (
         <Link
           key={l}
           href="/account"
           className="flex items-center gap-1 rounded-full border-[1.5px] border-line bg-surface py-0.5 pl-0.5 pr-2.5 text-xs font-semibold transition hover:border-accent"
-          title={`${l === "zh" ? "Tiếng Trung" : "Tiếng Anh"}: ${stats.ranks[l].title} (${stats.ranks[l].level})`}
+          title={`${LANGS[l].name}: ${stats.ranks[l].title} (${stats.ranks[l].level})`}
         >
           <KnightIcon color={stats.ranks[l].color} index={stats.ranks[l].index} size={26} />
-          <span className={l === "zh" ? "han" : ""}>{l === "zh" ? "中" : "EN"}</span>
+          <span className={LANGS[l].font}>{LANGS[l].short}</span>
         </Link>
       ))}
     </div>
@@ -105,8 +119,8 @@ export function AppFrame({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const items = nav(user.role === "admin");
-  // The admin link lives on the profile page on mobile, so the bar keeps five slots.
+  const items = nav(user.role === "admin", stats.langs);
+  // The admin link lives on the profile page on mobile; the bar grows with the number of languages.
   const mobileItems = items.filter((i) => i.href !== "/admin");
 
   return (
@@ -188,23 +202,26 @@ export function AppFrame({
 
         {/* Mobile bottom nav */}
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
-          <div className="mx-auto grid max-w-lg grid-cols-5">
+          <div
+            className="mx-auto grid max-w-lg"
+            style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}
+          >
             {mobileItems.map((item) => {
               const active = item.match(pathname);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition ${
+                  className={`flex h-16 min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition ${
                     active ? "text-ink" : "text-muted"
                   }`}
                 >
                   <span
-                    className={`grid h-8 w-12 place-items-center rounded-full transition ${active ? "bg-accent text-accent-ink" : ""}`}
+                    className={`grid h-8 w-full max-w-12 place-items-center rounded-full transition ${active ? "bg-accent text-accent-ink" : ""}`}
                   >
                     {item.icon}
                   </span>
-                  {item.label}
+                  <span className="max-w-full truncate px-0.5">{item.short ?? item.label}</span>
                 </Link>
               );
             })}

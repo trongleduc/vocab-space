@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/ui";
 import { db, schema } from "@/db";
 import { ITEM_KINDS, type ItemKind } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import { KIND_LABEL } from "@/lib/langs";
+import { fontOfKind, KIND_LABEL } from "@/lib/langs";
+import { LEVEL_ORDER } from "@/lib/queries";
 import { DeleteItemButton, ItemForm } from "./item-form";
 
 const PER_PAGE = 30;
@@ -28,7 +29,7 @@ export default async function AdminItemsPage({ searchParams }: PageProps<"/admin
       .select()
       .from(schema.items)
       .where(and(...where))
-      .orderBy(asc(schema.items.level), asc(schema.items.sortOrder), asc(schema.items.id))
+      .orderBy(LEVEL_ORDER, asc(schema.items.sortOrder), asc(schema.items.id))
       .limit(PER_PAGE)
       .offset((page - 1) * PER_PAGE),
     db.select({ n: count() }).from(schema.items).where(and(...where)),
@@ -45,7 +46,7 @@ export default async function AdminItemsPage({ searchParams }: PageProps<"/admin
     <div>
       <PageHeader
         title="Từ vựng"
-        description="Thêm, sửa, xóa từ vựng, câu thông dụng và idioms. Bao chữ cần làm nổi bật trong câu ví dụ bằng [ngoặc vuông]."
+        description="Thêm, sửa, xóa từ vựng, câu thông dụng và idioms của cả bốn ngôn ngữ. Bao chữ cần làm nổi bật trong câu ví dụ bằng [ngoặc vuông]."
         actions={
           <Link href={qs({ new: "1", edit: undefined })} className="btn btn-primary btn-sm">
             <Plus size={15} /> Thêm mục
@@ -96,7 +97,7 @@ export default async function AdminItemsPage({ searchParams }: PageProps<"/admin
               {rows.map((r) => (
                 <tr key={r.id} className={r.id === editId ? "bg-accent-soft" : ""}>
                   <td className="px-4 py-2.5">
-                    <div className={`font-semibold ${r.kind.startsWith("zh") ? "han text-base" : ""}`}>{r.term}</div>
+                    <div className={`font-semibold ${fontOfKind(r.kind) ? `${fontOfKind(r.kind)} text-base` : ""}`}>{r.term}</div>
                     {r.reading && <div className="text-xs text-muted">{r.reading}</div>}
                   </td>
                   <td className="max-w-64 px-4 py-2.5">{r.meaning}</td>

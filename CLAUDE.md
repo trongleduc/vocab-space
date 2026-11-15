@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Vocab Space is a Vietnamese-language vocabulary app for a small group. It covers Chinese (HSK 3.0) and English (B1+), each with daily word sets, spaced repetition, flashcards and fill-in-the-blank exercises. An admin issues accounts. Members log in by picking their name and entering their password. Gamification: a TikTok-style streak flame, a UI accent colour that changes with the streak, milestone celebrations, and knight ranks mapped to HSK/CEFR levels. All UI text and meanings are in Vietnamese.
+Vocab Space is a Vietnamese-language vocabulary app for a small group. It covers Chinese (HSK 3.0), English (B1+), Korean (TOPIK 1–6) and Japanese (JLPT N5–N1), each with daily word sets, spaced repetition, flashcards and fill-in-the-blank exercises. Each member chooses which languages they learn. An admin issues accounts. Members log in by picking their name and entering their password. Gamification: a TikTok-style streak flame, a UI accent colour that changes with the streak, milestone celebrations, and knight ranks mapped to HSK/CEFR/TOPIK/JLPT levels. All UI text and meanings are in Vietnamese.
 
 ## Commands
 
@@ -39,21 +39,24 @@ These versions are newer than most training data. Check `node_modules/next/dist/
 
 ## Architecture
 
-**Data model** (`src/db/schema.ts`): one `items` table holds all content, split by `kind`: `zh_word`, `zh_phrase` (daily phrases), `en_word`, `en_idiom` (kinds are defined in `src/lib/kinds.ts` so client code can import them without pulling in Drizzle). Other fields:
+**Data model** (`src/db/schema.ts`): one `items` table holds all content, split by `kind`: `zh_word`, `zh_phrase` (daily phrases), `en_word`, `en_idiom`, `ko_word`, `ko_phrase`, `ja_word`, `ja_phrase`. Kinds and language codes are defined in `src/lib/kinds.ts` so client code can import them without pulling in Drizzle; `kind` is a plain text column, so adding a kind needs no migration. Other fields:
 
-- `reading` holds pinyin or IPA, and `meaning` is Vietnamese.
+- `reading` holds pinyin (zh), IPA (en), Revised Romanization (ko) or `kana · romaji` (ja; romaji alone for kana-only words). `meaning` is Vietnamese.
 - `prepositions` is English only, `;`-separated.
-- `note` is a usage note.
-- `letter` is precomputed for A–Z browsing. For Chinese it is the first pinyin letter without tones, set by `letterOf`.
+- `note` is a usage note. Korean/Japanese seed words put the Sino-Vietnamese reading here.
+- `letter` is precomputed for browsing by `letterOf(term, reading, lang)`: A–Z (Chinese uses the first pinyin letter without tones), the initial consonant ㄱ ㄴ ㄷ… for Korean, and the kana row あ か さ… for Japanese.
 - `examples` is a JSONB array of `{text, reading?, translation}`. **The target word in an example is wrapped in `[brackets]`.** Brackets drive highlighting (`components/example.tsx`) and blanking in exercises (`findTarget` in `src/lib/text.ts`).
+
+`users.langs` (jsonb, default `["zh","en"]`) lists the languages a member learns. It drives the nav, dashboard, rank badges, `dueTotal` and the review queue (`getReviewQuestions(userId, langs)`); learned totals, ranks and milestones still count every language. Members toggle it on `/account` (`setLanguages` in `actions/learn.ts`); pages of a disabled language still work and show a banner to re-enable it.
 
 Per-user state lives in `progress` (SRS fields, one row per user/item, created when an item is learned or first answered) and `activity` (one row per user per local day). Streaks are computed from `activity`. The day boundary uses the timezone from settings (`dayIn` in `src/lib/dates.ts`).
 
-**Language config** (`src/lib/langs.ts`): `LANGS.zh` and `LANGS.en` map a language to its word kind, extra kind, levels, standard and speech locale. Pages under `src/app/(app)/[lang]/` are shared by both languages and branch on this config. Routes: `/[lang]` (today), `browse`, `expressions` (phrases/idioms), `flashcards`, `exercise`, `history`.
+**Language config** (`src/lib/langs.ts`): `LANGS[lang]` maps a language to its word kind, extra kind, levels, standard, speech locale, font class (`han`, `ja`, `ko` in `globals.css`; Japanese needs its own font stack so kanji are not drawn with Chinese glyphs) and all language-specific UI copy. Pages under `src/app/(app)/[lang]/` are shared by every language and read from this config; do not branch on `lang === "zh"`. Helpers: `fontOfKind`, `speechOfKind`, `kindsOf(langs)`. `LEVEL_ORDER` in `queries.ts` sorts levels easy → hard for every standard. Routes: `/[lang]` (today), `browse`, `expressions` (phrases/idioms), `flashcards`, `exercise`, `history`.
 
 **Learning flow**:
 
-- `lib/queries.ts` holds the read models: the daily set (items learned today plus the next unlearned items ordered by level, up to the quota), browse, history and quiz/cloze generation with random distractors.
+- `lib/queries.ts` holds the read models: the daily set (items learned today plus the next unlearned items, up to the quota, returned in curriculum order rather than grouped by status), browse, history and quiz/cloze generation with random distractors.
+- Lists of word cards render through `components/word-grid.tsx`. It keeps on-screen order across the `refresh()` that follows marking/unmarking, so cards never jump or vanish (e.g. under the "Chưa học" filter); give it a `key` that changes with filters/page.
 - `lib/progress.ts` holds the writes:
   - `recordLearned` marks items learned.
   - `recordAnswers` grades answers through `lib/srs.ts`, a simplified SM-2. A wrong answer brings the item back in 10 minutes with `priority=true` until it is answered right twice in a row.

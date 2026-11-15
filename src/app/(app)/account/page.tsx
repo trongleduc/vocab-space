@@ -2,18 +2,22 @@ import { LogOut, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { FlameIcon, KnightIcon } from "@/components/icons";
+import { LanguagePicker } from "@/components/language-picker";
 import { PasswordForm } from "@/components/password-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PageHeader, RankLine } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { KNIGHT_TITLES, STREAK_TIERS } from "@/lib/gamification";
-import { LANGS } from "@/lib/langs";
+import { LANG_CODES, LANGS } from "@/lib/langs";
 import { getStats } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const [stats, settings] = await Promise.all([getStats(user.id), getSettings()]);
+  const [stats, settings] = await Promise.all([getStats(user), getSettings()]);
+  const learned = Object.fromEntries(
+    LANG_CODES.map((l) => [l, (stats.learned[LANGS[l].wordKind] ?? 0) + (stats.learned[LANGS[l].extraKind] ?? 0)]),
+  );
 
   return (
     <div>
@@ -38,13 +42,21 @@ export default async function AccountPage() {
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
+        <section id="ngon-ngu" className="card scroll-mt-24 p-6 lg:col-span-2">
+          <h2 className="font-bold">Ngôn ngữ đang học</h2>
+          <p className="mt-1 text-sm text-muted">Chọn những ngôn ngữ bạn muốn học. Có thể đổi bất cứ lúc nào.</p>
+          <div className="mt-4">
+            <LanguagePicker langs={user.langs} learned={learned} />
+          </div>
+        </section>
+
         <section className="card p-6">
           <h2 className="font-bold">Xếp hạng hiệp sĩ</h2>
           <p className="mt-1 text-sm text-muted">
-            Dựa trên số từ đã học, đối chiếu với lượng từ chuẩn của HSK 3.0 và CEFR.
+            Dựa trên số từ đã học, đối chiếu với lượng từ chuẩn của {user.langs.map((l) => LANGS[l].standard).join(", ")}.
           </p>
           <div className="mt-5 space-y-5">
-            {(["zh", "en"] as const).map((l) => (
+            {user.langs.map((l) => (
               <div key={l}>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">{LANGS[l].name}</p>
                 <RankLine rank={stats.ranks[l]} standard={LANGS[l].standard} />
@@ -53,7 +65,7 @@ export default async function AccountPage() {
           </div>
           <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-8">
             {KNIGHT_TITLES.map((t, i) => {
-              const reached = Math.max(stats.ranks.zh.index, stats.ranks.en.index) >= i;
+              const reached = Math.max(...LANG_CODES.map((l) => stats.ranks[l].index)) >= i;
               return (
                 <div key={t.title} className={`text-center ${reached ? "" : "opacity-30 grayscale"}`} title={t.title}>
                   <KnightIcon color={t.color} index={i} size={36} className="mx-auto" />
@@ -65,7 +77,7 @@ export default async function AccountPage() {
           <details className="mt-5 text-sm">
             <summary className="cursor-pointer font-semibold text-muted">Thang quy đổi</summary>
             <div className="mt-3 grid grid-cols-2 gap-4">
-              {(["zh", "en"] as const).map((l) => (
+              {user.langs.map((l) => (
                 <table key={l} className="w-full text-left">
                   <thead>
                     <tr className="text-xs text-muted">

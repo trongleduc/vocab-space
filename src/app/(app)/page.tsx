@@ -1,20 +1,17 @@
-import { ArrowRight, RotateCcw } from "lucide-react";
+import { ArrowRight, Plus, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { FlameIcon } from "@/components/icons";
 import { Bar, PageHeader, RankLine } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { formatDay, weekdayShort } from "@/lib/dates";
-import { LANGS, type Lang } from "@/lib/langs";
+import { LANG_CODES, LANGS } from "@/lib/langs";
 import { getDailyItems, getStats } from "@/lib/queries";
 
 export default async function Dashboard() {
   const user = await requireUser();
-  const stats = await getStats(user.id);
-  const [zhToday, enToday] = await Promise.all([
-    getDailyItems(user.id, "zh_word"),
-    getDailyItems(user.id, "en_word"),
-  ]);
-  const todays: Record<Lang, typeof zhToday> = { zh: zhToday, en: enToday };
+  const stats = await getStats(user);
+  const todays = await Promise.all(user.langs.map((l) => getDailyItems(user.id, LANGS[l].wordKind)));
+  const others = LANG_CODES.filter((l) => !user.langs.includes(l));
   const weekMax = Math.max(1, ...stats.week.map((d) => d.learned + d.reviewed));
   const tier = stats.tier;
   const lit = stats.activeToday && stats.streak > 0;
@@ -67,9 +64,9 @@ export default async function Dashboard() {
       </section>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
-        {(["zh", "en"] as const).map((l) => {
+        {user.langs.map((l, i) => {
           const cfg = LANGS[l];
-          const t = todays[l];
+          const t = todays[i];
           const due = (stats.due[cfg.wordKind] ?? 0) + (stats.due[cfg.extraKind] ?? 0);
           const complete = t.quota > 0 && t.done >= t.quota;
           return (
@@ -77,13 +74,13 @@ export default async function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span
-                    className={`grid size-11 place-items-center rounded-2xl bg-ink text-surface ${l === "zh" ? "han text-xl" : "text-sm"} font-bold`}
+                    className={`grid size-11 place-items-center rounded-2xl bg-ink text-surface ${cfg.font ? `${cfg.font} text-xl` : "text-sm"} font-bold`}
                   >
-                    {l === "zh" ? "中" : "EN"}
+                    {cfg.short}
                   </span>
                   <div>
                     <h2 className="text-lg font-bold">{cfg.name}</h2>
-                    <p className="text-sm text-muted">{l === "zh" ? "HSK 3.0" : "B1 trở lên"}</p>
+                    <p className="text-sm text-muted">{cfg.levelSummary}</p>
                   </div>
                 </div>
                 {due > 0 && (
@@ -118,6 +115,24 @@ export default async function Dashboard() {
           );
         })}
       </div>
+
+      {others.length > 0 && (
+        <Link
+          href="/account#ngon-ngu"
+          className="card mt-5 flex items-center gap-4 p-4 transition hover:border-accent sm:p-5"
+        >
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl border-[1.5px] border-dashed border-line text-muted">
+            <Plus size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">Học thêm ngôn ngữ</p>
+            <p className="text-sm text-muted">
+              Bật {others.map((l) => LANGS[l].name).join(", ")} trong Hồ sơ. Ngôn ngữ đang tắt không tính vào ôn tập.
+            </p>
+          </div>
+          <ArrowRight size={18} className="shrink-0 text-muted" />
+        </Link>
+      )}
 
       <div className="mt-5 grid gap-5 sm:grid-cols-2">
         <section className="card p-6">

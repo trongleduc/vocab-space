@@ -1,8 +1,10 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { refresh } from "next/cache";
+import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
-import { isLang } from "@/lib/langs";
+import { isLang, LANG_CODES } from "@/lib/langs";
 import { recordAnswers, recordLearned, unlearnToday, type Answer } from "@/lib/progress";
 import { getReviewQuestions } from "@/lib/queries";
 
@@ -31,8 +33,27 @@ export async function submitAnswers(answers: Answer[]) {
   return result;
 }
 
-/** Due reviews; with `anyLearned`, a random batch of learned items for extra practice. */
+/**
+ * Due reviews from one language, or from every language the user is learning;
+ * with `anyLearned`, a random batch of learned items for extra practice.
+ */
 export async function fetchReview(lang?: string, anyLearned = false) {
   const user = await requireUser();
-  return getReviewQuestions(user.id, lang && isLang(lang) ? lang : undefined, anyLearned);
+  return getReviewQuestions(user.id, lang && isLang(lang) ? [lang] : user.langs, anyLearned);
+}
+
+/** Turn languages on or off for the current user. At least one must stay on. */
+export async function setLanguages(langs: string[]) {
+  const user = await requireUser();
+  const next = LANG_CODES.filter((l) => langs.includes(l));
+  if (!next.length) return { error: "Cần bật ít nhất một ngôn ngữ." };
+  await db.update(schema.users).set({ langs: next }).where(eq(schema.users.id, user.id));
+  refresh();
+  return { ok: true as const };
+}
+
+export async function enableLanguage(lang: string) {
+  const user = await requireUser();
+  if (!isLang(lang)) return;
+  await setLanguages([...user.langs, lang]);
 }

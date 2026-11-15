@@ -10,7 +10,7 @@ export const instant = false;
 
 async function Frame({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [settings, stats] = await Promise.all([getSettings(), getStats(user.id)]);
+  const [settings, stats] = await Promise.all([getSettings(), getStats(user)]);
   return (
     <AppFrame
       user={{ name: user.name, role: user.role }}
@@ -22,6 +22,7 @@ async function Frame({ children }: { children: React.ReactNode }) {
         tierName: stats.tier.name,
         dueTotal: stats.dueTotal,
         total: stats.total,
+        langs: user.langs,
         ranks: stats.ranks,
       }}
     >

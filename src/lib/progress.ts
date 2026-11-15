@@ -3,7 +3,7 @@ import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { addDays, dayIn } from "./dates";
 import { computeStreak, crossedMilestones, rankFor, streakTier, type Celebration } from "./gamification";
-import { LANGS } from "./langs";
+import { LANG_CODES, LANGS } from "./langs";
 import { getSettings } from "./settings";
 import { FRESH, firstDue, schedule } from "./srs";
 
@@ -81,7 +81,7 @@ async function celebrationsAfter(
     }
   }
 
-  for (const lang of ["zh", "en"] as const) {
+  for (const lang of LANG_CODES) {
     const kind = LANGS[lang].wordKind;
     const b = get(before, kind);
     const a = get(after, kind);

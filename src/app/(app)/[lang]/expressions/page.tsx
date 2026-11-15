@@ -5,7 +5,7 @@ import { ExampleLine } from "@/components/example";
 import { LearnAllButton } from "@/components/learn-all";
 import { SpeakButton } from "@/components/speak";
 import { EmptyState, PageHeader } from "@/components/ui";
-import { WordCard } from "@/components/word-card";
+import { WordGrid } from "@/components/word-grid";
 import { requireUser } from "@/lib/auth";
 import { formatDay } from "@/lib/dates";
 import { isLang, LANGS } from "@/lib/langs";
@@ -22,18 +22,14 @@ export default async function ExpressionsPage({ params }: PageProps<"/[lang]/exp
     getHistory(user.id, [cfg.extraKind], 14),
   ]);
   const past = history.filter((h) => h.day !== today);
-  const han = lang === "zh";
+  const font = cfg.font;
 
   return (
     <div>
       <PageHeader
         eyebrow={cfg.name}
-        title={lang === "zh" ? "Câu thông dụng hằng ngày" : "Idioms mỗi ngày"}
-        description={
-          lang === "zh"
-            ? `Mỗi ngày ${daily.quota} câu nói hay dùng trong đời sống, kèm pinyin và tình huống sử dụng.`
-            : `Mỗi ngày ${daily.quota} thành ngữ tiếng Anh, kèm nghĩa và ví dụ.`
-        }
+        title={cfg.extraTitle}
+        description={cfg.extraDescription(daily.quota)}
         actions={
           <>
             <LearnAllButton ids={daily.items.filter((i) => !i.learnedOn).map((i) => i.id)} />
@@ -48,11 +44,7 @@ export default async function ExpressionsPage({ params }: PageProps<"/[lang]/exp
       {daily.items.length === 0 ? (
         <EmptyState title="Đã học hết">Không còn mục mới. Quản trị viên có thể nhập thêm.</EmptyState>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {daily.items.map((item) => (
-            <WordCard key={item.id} item={item} today={today} speech={cfg.speech} />
-          ))}
-        </div>
+        <WordGrid key={`${cfg.extraKind}-${today}`} items={daily.items} today={today} speech={cfg.speech} />
       )}
 
       {past.length > 0 && (
@@ -66,7 +58,7 @@ export default async function ExpressionsPage({ params }: PageProps<"/[lang]/exp
                   <li key={item.id} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className={`font-semibold ${han ? "han text-xl" : "text-lg"}`}>{item.term}</p>
+                        <p className={`font-semibold ${font ? `${font} text-xl` : "text-lg"}`}>{item.term}</p>
                         {item.reading && <p className="text-sm text-muted">{item.reading}</p>}
                         <p className="mt-0.5">{item.meaning}</p>
                       </div>
@@ -74,7 +66,7 @@ export default async function ExpressionsPage({ params }: PageProps<"/[lang]/exp
                     </div>
                     {item.examples[0] && (
                       <ul className="mt-2">
-                        <ExampleLine ex={item.examples[0]} han={han} />
+                        <ExampleLine ex={item.examples[0]} font={font} />
                       </ul>
                     )}
                   </li>

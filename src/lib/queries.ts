@@ -6,7 +6,8 @@ import { db, schema } from "@/db";
 import type { Item, ItemKind } from "@/db/schema";
 import { addDays, dayIn } from "./dates";
 import { computeStreak, rankFor, streakTier } from "./gamification";
-import { LANGS, type Lang } from "./langs";
+import type { SessionUser } from "./auth";
+import { kindsOf, LANG_CODES, LANGS, levelRank, type Lang } from "./langs";
 import { activeDays } from "./progress";
 import { getSettings } from "./settings";
 import { findTarget, shuffle } from "./text";
@@ -28,8 +29,11 @@ const withStatus = (userId: number) =>
 const flatten = (rows: { item: Item; learnedOn: string | null; priority: boolean | null }[]): ItemWithStatus[] =>
   rows.map((r) => ({ ...r.item, learnedOn: r.learnedOn, priority: Boolean(r.priority) }));
 
-const LEVEL_ORDER = sql`case
+/** Easy → hard within one kind: HSK1..7-9, B1..C2, TOPIK1..6, N5..N1. */
+export const LEVEL_ORDER = sql`case
   when ${items.level} ~ '^HSK[0-9]' then substring(${items.level} from 4 for 1)::int
+  when ${items.level} ~ '^TOPIK[1-6]$' then substring(${items.level} from 6 for 1)::int
+  when ${items.level} ~ '^N[1-5]$' then 6 - substring(${items.level} from 2 for 1)::int
   when ${items.level} = 'B1' then 1 when ${items.level} = 'B2' then 2
   when ${items.level} = 'C1' then 3 when ${items.level} = 'C2' then 4
   else 99 end`;
@@ -40,9 +44,14 @@ export const getToday = cache(async () => {
   return dayIn(timezone);
 });
 
-/** Header/dashboard numbers for one user. */
-export const getStats = cache(async (userId: number) => {
+/**
+ * Header/dashboard numbers for the signed-in user. Due counts only cover the languages the
+ * user is learning; learned totals and ranks cover everything, so turning a language off
+ * never takes away progress.
+ */
+export const getStats = cache(async (user: SessionUser) => {
   await connection();
+  const userId = user.id;
   const settings = await getSettings();
   const today = await getToday();
   const [days, learnedRows, dueRows, weekRows] = await Promise.all([
@@ -73,6 +82,9 @@ export const getStats = cache(async (userId: number) => {
     return { day, learned: row?.learned ?? 0, reviewed: row?.reviewed ?? 0 };
   });
   const total = Object.values(learned).reduce((a, b) => a + (b ?? 0), 0);
+  const ranks = Object.fromEntries(
+    LANG_CODES.map((l) => [l, rankFor(learned[LANGS[l].wordKind] ?? 0, settings.rankScales[l])]),
+  ) as Record<Lang, ReturnType<typeof rankFor>>;
   return {
     today,
     streak,
@@ -81,17 +93,18 @@ export const getStats = cache(async (userId: number) => {
     learned,
     total,
     due,
-    dueTotal: Object.values(due).reduce((a, b) => a + (b ?? 0), 0),
+    dueTotal: kindsOf(user.langs).reduce((a, k) => a + (due[k] ?? 0), 0),
     week,
-    ranks: {
-      zh: rankFor(learned.zh_word ?? 0, settings.rankScales.zh),
-      en: rankFor(learned.en_word ?? 0, settings.rankScales.en),
-    },
+    ranks,
     nextMilestone: settings.milestones.find((m) => m > total) ?? null,
   };
 });
 
-/** Today's set: items learned today plus the next unlearned ones, up to the daily quota. */
+/**
+ * Today's set: items learned today plus the next unlearned ones, up to the daily quota.
+ * The set is returned in curriculum order, not grouped by status, so marking or unmarking
+ * an item never moves it (marking one swaps nothing in or out of the set).
+ */
 export async function getDailyItems(userId: number, kind: ItemKind) {
   const settings = await getSettings();
   const today = await getToday();
@@ -110,7 +123,10 @@ export async function getDailyItems(userId: number, kind: ItemKind) {
           .limit(remaining),
       )
     : [];
-  return { quota, done: learnedToday.length, items: [...learnedToday, ...upcoming] };
+  const list = [...learnedToday, ...upcoming].sort(
+    (a, b) => levelRank(a.kind, a.level) - levelRank(b.kind, b.level) || a.sortOrder - b.sortOrder || a.id - b.id,
+  );
+  return { quota, done: learnedToday.length, items: list };
 }
 
 export type BrowseFilter = {
@@ -232,12 +248,13 @@ async function toQuestions(rows: ItemWithStatus[], field: "meaning" | "term"): P
   });
 }
 
-/** Due reviews, wrong answers first. */
-export async function getReviewQuestions(userId: number, lang?: Lang, anyLearned = false) {
+/** Due reviews from the given languages, wrong answers first. */
+export async function getReviewQuestions(userId: number, langs: Lang[], anyLearned = false) {
   await connection();
   const settings = await getSettings();
+  if (!langs.length) return [];
   const where: SQL[] = anyLearned ? [] : [lte(progress.dueAt, new Date())];
-  if (lang) where.push(sql`${items.kind} in ${[LANGS[lang].wordKind, LANGS[lang].extraKind]}`);
+  where.push(sql`${items.kind} in ${kindsOf(langs)}`);
   const rows = flatten(
     await db
       .select({ item: items, learnedOn: progress.learnedOn, priority: progress.priority })

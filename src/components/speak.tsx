@@ -8,7 +8,7 @@ export function speak(text: string, lang: string) {
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(stripBrackets(text));
   u.lang = lang;
-  u.rate = lang.startsWith("zh") ? 0.8 : 0.95;
+  u.rate = lang.startsWith("zh") ? 0.8 : lang.startsWith("ja") || lang.startsWith("ko") ? 0.85 : 0.95;
   const voice = window.speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(lang));
   if (voice) u.voice = voice;
   window.speechSynthesis.speak(u);

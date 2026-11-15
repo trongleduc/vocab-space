@@ -3,6 +3,7 @@
 import { Check, ChevronDown, Flag } from "lucide-react";
 import { useState, useTransition } from "react";
 import { markLearned, unmarkLearned } from "@/app/actions/learn";
+import { fontOfKind, isExtraKind } from "@/lib/langs";
 import type { ItemWithStatus } from "@/lib/queries";
 import { useCelebrate } from "./celebrate";
 import { ExampleLine } from "./example";
@@ -89,8 +90,8 @@ export function WordCard({
   learnable?: boolean;
 }) {
   const [more, setMore] = useState(false);
-  const han = item.kind.startsWith("zh");
-  const sentence = item.kind === "zh_phrase" || item.kind === "en_idiom";
+  const font = fontOfKind(item.kind);
+  const sentence = isExtraKind(item.kind);
   const examples = more ? item.examples : item.examples.slice(0, 1);
   const preps = (item.prepositions ?? "")
     .split(";")
@@ -121,7 +122,7 @@ export function WordCard({
       <div className="mt-3">
         <h3
           className={`font-bold tracking-tight ${
-            han ? (sentence ? "han text-2xl leading-snug" : "han text-4xl") : sentence ? "text-xl leading-snug" : "text-2xl"
+            font ? `${font} ${sentence ? "text-2xl leading-snug" : "text-4xl"}` : sentence ? "text-xl leading-snug" : "text-2xl"
           }`}
         >
           {item.term}
@@ -149,7 +150,7 @@ export function WordCard({
         <div className="mt-4">
           <ul className="space-y-3">
             {examples.map((ex, i) => (
-              <ExampleLine key={i} ex={ex} han={han} />
+              <ExampleLine key={i} ex={ex} font={font} />
             ))}
           </ul>
           {item.examples.length > 1 && (
