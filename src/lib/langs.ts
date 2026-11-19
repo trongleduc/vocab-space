@@ -26,6 +26,11 @@ export type LangConfig = {
   searchPlaceholder: string;
   browseDescription: string;
   exerciseDescription: string;
+  /**
+   * Fill-in-the-blank style. "term": pick the dictionary form of the word (meaning only).
+   * "grammar": pick the right inflected form or preposition for the sentence (English).
+   */
+  cloze: "term" | "grammar";
   /** Admin form placeholder for one example line: sentence | reading | translation. */
   examplePlaceholder: string;
 };
@@ -51,6 +56,7 @@ export const LANGS: Record<Lang, LangConfig> = {
     searchPlaceholder: "Tìm chữ Hán, pinyin hoặc nghĩa",
     browseDescription: "Toàn bộ từ vựng theo cấp độ HSK 3.0, theo chủ đề hoặc theo chữ cái pinyin.",
     exerciseDescription: "Chọn chữ Hán đúng cho câu ví dụ để quen mặt chữ. Câu sai được đưa vào danh sách ôn tập.",
+    cloze: "term",
     examplePlaceholder: "我[喜欢]喝茶。 | Wǒ xǐhuan hē chá. | Tôi thích uống trà.",
   },
   en: {
@@ -72,7 +78,9 @@ export const LANGS: Record<Lang, LangConfig> = {
     readingLabel: "Phiên âm IPA",
     searchPlaceholder: "Tìm từ hoặc nghĩa",
     browseDescription: "Từ vựng B1 trở lên theo cấp độ CEFR, theo chủ đề hoặc theo chữ cái.",
-    exerciseDescription: "Chọn từ đúng cho câu ví dụ. Câu sai được đưa vào danh sách ôn tập.",
+    exerciseDescription:
+      "Chọn dạng đúng của từ hoặc giới từ đi kèm để câu đúng cả nghĩa lẫn ngữ pháp: chia động từ, số ít/số nhiều, loại từ. Câu sai được đưa vào danh sách ôn tập.",
+    cloze: "grammar",
     examplePlaceholder: "She [depends on] her parents. | | Cô ấy phụ thuộc vào bố mẹ.",
   },
   ko: {
@@ -95,6 +103,7 @@ export const LANGS: Record<Lang, LangConfig> = {
     searchPlaceholder: "Tìm chữ Hangul, phiên âm hoặc nghĩa",
     browseDescription: "Từ vựng theo cấp TOPIK 1–6, theo chủ đề hoặc theo phụ âm đầu (ㄱ ㄴ ㄷ…).",
     exerciseDescription: "Chọn từ đúng cho câu ví dụ. Đáp án ở dạng nguyên thể, trong câu từ đã được chia đuôi. Câu sai được đưa vào danh sách ôn tập.",
+    cloze: "term",
     examplePlaceholder: "저는 커피를 [좋아해요]. | Jeoneun keopireul joahaeyo. | Tôi thích cà phê.",
   },
   ja: {
@@ -117,6 +126,7 @@ export const LANGS: Record<Lang, LangConfig> = {
     searchPlaceholder: "Tìm kanji, kana, romaji hoặc nghĩa",
     browseDescription: "Từ vựng theo cấp JLPT N5–N1, theo chủ đề hoặc theo hàng kana (あ か さ…).",
     exerciseDescription: "Chọn từ đúng cho câu ví dụ để quen mặt chữ kanji. Đáp án ở dạng từ điển. Câu sai được đưa vào danh sách ôn tập.",
+    cloze: "term",
     examplePlaceholder: "毎朝パンを[食べます]。 | Maiasa pan o tabemasu. | Sáng nào tôi cũng ăn bánh mì.",
   },
 };

@@ -18,6 +18,23 @@ export const ITEM_KINDS = [
 ] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
+/** Upper bound for any daily quota, personal or global. */
+export const MAX_DAILY = 100;
+
+/** A member's own daily quotas. Kinds that are not set use the admin default. */
+export type DailyOverrides = Partial<Record<ItemKind, number>>;
+
+/** Keep known kinds with whole numbers in 0..MAX_DAILY. */
+export function normalizeDaily(raw: unknown): DailyOverrides {
+  const src = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const out: DailyOverrides = {};
+  for (const k of ITEM_KINDS) {
+    const v = src[k];
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = Math.min(MAX_DAILY, Math.max(0, Math.round(v)));
+  }
+  return out;
+}
+
 export function isLang(v: unknown): v is Lang {
   return typeof v === "string" && (LANG_CODES as readonly string[]).includes(v);
 }

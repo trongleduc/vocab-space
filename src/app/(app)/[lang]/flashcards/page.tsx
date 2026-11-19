@@ -17,7 +17,7 @@ export default async function FlashcardsPage({ params, searchParams }: PageProps
   const source = (SOURCES.includes(sp.source ?? "") ? sp.source : "learned") as PracticeSource;
   const level = sp.level ?? cfg.levels[0];
   const mode = sp.mode === "quiz" ? "quiz" : "flip";
-  const cards = await getFlashcards(user.id, lang, source, level);
+  const cards = await getFlashcards(user, lang, source, level);
 
   return (
     <div>

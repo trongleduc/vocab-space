@@ -107,7 +107,7 @@ export function FloatingReview({ due, hasLearned }: { due: number; hasLearned: b
             role="dialog"
             aria-modal="true"
             aria-label="Ôn tập ngắt quãng"
-            className="card max-h-[92dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-b-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-rise sm:rounded-b-[22px] sm:p-7"
+            className="card max-h-[92dvh] w-full max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain rounded-b-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-rise sm:rounded-b-[22px] sm:p-7"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">

@@ -121,6 +121,10 @@ body {
   font-family: var(--font-ko);
 }
 
+/* Component classes live in a layer so Tailwind utilities on the same element win
+   (whitespace-normal, justify-start, rounded-b-none, pl-9...). Unlayered rules beat every
+   layered utility, which made long quiz answers refuse to wrap and overflow on phones. */
+@layer components {
 /* ---------- Pressable "floating" buttons ---------- */
 
 .btn {
@@ -264,6 +268,7 @@ body {
 textarea.field {
   min-height: 6rem;
   line-height: 1.5;
+}
 }
 
 mark.target {

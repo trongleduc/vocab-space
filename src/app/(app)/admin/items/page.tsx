@@ -1,6 +1,7 @@
 import { and, asc, count, eq, ilike, or, type SQL } from "drizzle-orm";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import { SearchField } from "@/components/search-field";
 import { PageHeader } from "@/components/ui";
 import { db, schema } from "@/db";
 import { ITEM_KINDS, type ItemKind } from "@/db/schema";
@@ -60,11 +61,13 @@ export default async function AdminItemsPage({ searchParams }: PageProps<"/admin
             {KIND_LABEL[k]}
           </Link>
         ))}
-        <form action="/admin/items" className="relative min-w-48 flex-1">
-          <input type="hidden" name="kind" value={kind} />
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input name="q" defaultValue={sp.q} placeholder="Tìm kiếm" className="field min-h-10 pl-9" />
-        </form>
+        <SearchField
+          action="/admin/items"
+          defaultValue={sp.q}
+          placeholder="Tìm kiếm"
+          hidden={{ kind }}
+          className="basis-full sm:basis-48 sm:flex-1"
+        />
       </div>
 
       {showForm && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Lightbulb } from "lucide-react";
+import { BookOpenCheck, Lightbulb } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { submitAnswers } from "@/app/actions/learn";
@@ -29,7 +29,7 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
 
   const pick = (choice: string, i: number) => {
     if (answered || !q) return;
-    const correct = choice === q.term;
+    const correct = choice === q.correct;
     setPicked(choice);
     setLog((l) => [...l, { itemId: q.id, correct, term: q.term, meaning: q.meaning, font }]);
     if (correct) burst(refs.current[i]);
@@ -82,7 +82,7 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
   }
   if (!q) return null;
 
-  const right = picked === q.term;
+  const right = picked === q.correct;
 
   return (
     <div className="mx-auto max-w-2xl" key={round}>
@@ -95,8 +95,8 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
       </div>
 
       <div key={q.id} className="card animate-rise p-6 sm:p-8">
-        <p className="mb-4 text-sm font-semibold text-muted">Điền từ phù hợp vào chỗ trống</p>
-        <p className={`leading-loose ${font ? `${font} text-2xl sm:text-3xl` : "text-xl sm:text-2xl"}`}>
+        <p className="mb-4 text-sm font-semibold text-muted">{q.prompt}</p>
+        <p className={`leading-loose [overflow-wrap:anywhere] ${font ? `${font} text-2xl sm:text-3xl` : "text-xl sm:text-2xl"}`}>
           {q.before}
           <span
             className={`mx-1 inline-block min-w-16 rounded-lg border-b-[3px] px-2 text-center font-bold transition ${
@@ -121,7 +121,7 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         {q.choices.map((c, i) => {
-          const state = !answered ? "" : c === q.term ? "right" : c === picked ? "wrong" : "dim";
+          const state = !answered ? "" : c === q.correct ? "right" : c === picked ? "wrong" : "dim";
           return (
             <button
               key={c}
@@ -130,7 +130,7 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
               }}
               onClick={() => pick(c, i)}
               disabled={answered && state === "dim"}
-              className={`btn h-16 ${font ? `${font} text-2xl` : "text-lg"} ${
+              className={`btn h-auto min-h-16 min-w-0 whitespace-normal py-2 leading-tight [overflow-wrap:anywhere] ${font ? `${font} text-2xl` : "text-lg"} ${
                 state === "right" ? "btn-good animate-pop" : state === "wrong" ? "btn-bad animate-shake" : ""
               }`}
             >
@@ -142,6 +142,19 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
 
       {answered && (
         <div className="mt-5 animate-rise">
+          {(q.explain || q.pattern) && (
+            <div className="mb-4 flex gap-3 rounded-2xl bg-surface-2 p-4 text-sm">
+              <BookOpenCheck size={18} className="mt-0.5 shrink-0 text-muted" />
+              <div className="min-w-0 space-y-1">
+                {q.explain && <p className="font-semibold">{q.explain}</p>}
+                {q.pattern && (
+                  <p className="text-muted">
+                    Cấu trúc: <span className="text-ink">{q.pattern}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           <p className="text-center text-sm text-muted">
             <span className={`font-semibold ${font}`}>{q.term}</span>
             {q.reading && ` · ${q.reading}`} · {q.meaning}

@@ -16,7 +16,7 @@ export default async function ExercisePage({ params, searchParams }: PageProps<"
   const user = await requireUser();
   const source = (SOURCES.includes(sp.source ?? "") ? sp.source : "learned") as PracticeSource;
   const level = sp.level ?? cfg.levels[0];
-  const questions = await getClozeQuestions(user.id, lang, source, level);
+  const questions = await getClozeQuestions(user, lang, source, level);
 
   return (
     <div>

@@ -24,7 +24,7 @@ npm run db:seed    # create the first admin (if no users) + starter content; ide
 These versions are newer than most training data. Check `node_modules/next/dist/docs/` before relying on remembered APIs.
 
 - **Next.js 16.4** App Router under `src/app/`, **React 19.3**, TypeScript strict, path alias `@/*` → `src/*`. Middleware is called **Proxy** here (`src/proxy.ts`). It only checks that the session cookie exists and redirects to `/login`.
-- **Tailwind v4**, CSS-first, loaded through `@tailwindcss/turbopack` in `next.config.ts` (no PostCSS, no tailwind config). Design tokens, button styles and animations are all in `src/app/globals.css`.
+- **Tailwind v4**, CSS-first, loaded through `@tailwindcss/turbopack` in `next.config.ts` (no PostCSS, no tailwind config). Design tokens, button styles and animations are all in `src/app/globals.css`. Component classes (`.btn`, `.card`, `.chip`, `.field`) sit in `@layer components` so utilities on the same element win; keep new component classes there, since an unlayered rule beats every utility.
 - **Drizzle ORM** over `@neondatabase/serverless` (HTTP driver). There are no interactive transactions, so batch work uses multi-row inserts and `on conflict`.
 
 ## Cache Components rules (these break the build or runtime if ignored)
@@ -49,7 +49,7 @@ Content beyond the hand-written starter sets comes from two generated files in `
 - `letter` is precomputed for browsing by `letterOf(term, reading, lang)`: A–Z (Chinese uses the first pinyin letter without tones), the initial consonant ㄱ ㄴ ㄷ… for Korean, and the kana row あ か さ… for Japanese.
 - `examples` is a JSONB array of `{text, reading?, translation}`. **The target word in an example is wrapped in `[brackets]`.** Brackets drive highlighting (`components/example.tsx`) and blanking in exercises (`findTarget` in `src/lib/text.ts`).
 
-`users.langs` (jsonb, default `["zh","en"]`) lists the languages a member learns. It drives the nav, dashboard, rank badges, `dueTotal` and the review queue (`getReviewQuestions(userId, langs)`); learned totals, ranks and milestones still count every language. Members toggle it on `/account` (`setLanguages` in `actions/learn.ts`); pages of a disabled language still work and show a banner to re-enable it.
+`users.langs` (jsonb, default `["zh","en"]`) lists the languages a member learns. It drives the nav, dashboard, rank badges, `dueTotal` and the review queue (`getReviewQuestions(userId, langs)`); learned totals, ranks and milestones still count every language. Members toggle it on `/account` (`setLanguages` in `actions/learn.ts`); pages of a disabled language still work and show a banner to re-enable it. `users.daily` (jsonb, default `{}`) holds a member's own daily quota per kind, set on `/account` (`setDailyGoals`); a missing kind falls back to the admin default through `quotaFor` in `lib/settings.ts`. That is why `getDailyItems` and the practice queries take the session user rather than a bare id.
 
 Per-user state lives in `progress` (SRS fields, one row per user/item, created when an item is learned or first answered) and `activity` (one row per user per local day). Streaks are computed from `activity`. The day boundary uses the timezone from settings (`dayIn` in `src/lib/dates.ts`).
 
@@ -58,6 +58,7 @@ Per-user state lives in `progress` (SRS fields, one row per user/item, created w
 **Learning flow**:
 
 - `lib/queries.ts` holds the read models: the daily set (items learned today plus the next unlearned items, up to the quota, returned in curriculum order rather than grouped by status), browse, history and quiz/cloze generation with random distractors.
+- Fill-in-the-blank has two styles, picked by `LANGS[lang].cloze`. `"term"` asks for the dictionary form, so it tests meaning only. `"grammar"` (English) builds questions in `lib/en-grammar.ts`: it blanks either the preposition after the word or the inflected word. Choices mix wrong forms that the words before the blank rule out (after "will", "has", "was"…), word-family members of another part of speech (arrival for arrived) and another word in the same form. Each question also has a Vietnamese grammar note. Answers are checked against `ClozeQuestion.correct`.
 - Lists of word cards render through `components/word-grid.tsx`. It keeps on-screen order across the `refresh()` that follows marking/unmarking, so cards never jump or vanish (e.g. under the "Chưa học" filter); give it a `key` that changes with filters/page.
 - `lib/progress.ts` holds the writes:
   - `recordLearned` marks items learned.

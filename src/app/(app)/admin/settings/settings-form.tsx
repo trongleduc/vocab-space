@@ -39,7 +39,10 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
       </section>
 
       <section className="card space-y-4 p-5">
-        <h2 className="font-bold">Lượng học mỗi ngày</h2>
+        <div>
+          <h2 className="font-bold">Lượng học mỗi ngày (mặc định)</h2>
+          <p className="mt-1 text-sm text-muted">Áp dụng cho thành viên chưa tự chọn số lượng trong trang Hồ sơ.</p>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           {LANG_CODES.map((l) => {
             const cfg = LANGS[l];

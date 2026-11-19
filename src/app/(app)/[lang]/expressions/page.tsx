@@ -18,7 +18,7 @@ export default async function ExpressionsPage({ params }: PageProps<"/[lang]/exp
   const user = await requireUser();
   const [today, daily, history] = await Promise.all([
     getToday(),
-    getDailyItems(user.id, cfg.extraKind),
+    getDailyItems(user, cfg.extraKind),
     getHistory(user.id, [cfg.extraKind], 14),
   ]);
   const past = history.filter((h) => h.day !== today);

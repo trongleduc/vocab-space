@@ -238,7 +238,7 @@ export function QuizSession({
         )}
         <div className="flex items-center justify-center gap-3">
           <h2
-            className={`${font ? `${font} ${long ? "text-4xl sm:text-5xl" : "text-6xl sm:text-7xl"}` : "text-4xl sm:text-5xl"} font-bold tracking-tight break-words`}
+            className={`${font ? `${font} ${long ? "text-4xl sm:text-5xl" : "text-6xl sm:text-7xl"}` : "text-4xl sm:text-5xl"} min-w-0 font-bold tracking-tight [overflow-wrap:anywhere]`}
           >
             {q.term}
           </h2>
@@ -269,14 +269,14 @@ export function QuizSession({
               }}
               onClick={() => pick(c, i)}
               disabled={answered && state === "dim"}
-              className={`btn h-auto min-h-14 justify-start whitespace-normal py-3 text-left ${
+              className={`btn h-auto min-h-14 min-w-0 justify-start whitespace-normal py-3 text-left leading-snug [overflow-wrap:anywhere] ${
                 state === "right" ? "btn-good animate-pop" : state === "wrong" ? "btn-bad animate-shake" : ""
               }`}
             >
               <span className="grid size-6 shrink-0 place-items-center rounded-md border-[1.5px] border-current/30 font-mono text-xs opacity-70">
                 {state === "right" ? <Check size={14} /> : state === "wrong" ? <X size={14} /> : i + 1}
               </span>
-              <span>{c}</span>
+              <span className="min-w-0">{c}</span>
             </button>
           );
         })}

@@ -10,7 +10,7 @@ import { getDailyItems, getStats } from "@/lib/queries";
 export default async function Dashboard() {
   const user = await requireUser();
   const stats = await getStats(user);
-  const todays = await Promise.all(user.langs.map((l) => getDailyItems(user.id, LANGS[l].wordKind)));
+  const todays = await Promise.all(user.langs.map((l) => getDailyItems(user, LANGS[l].wordKind)));
   const others = LANG_CODES.filter((l) => !user.langs.includes(l));
   const weekMax = Math.max(1, ...stats.week.map((d) => d.learned + d.reviewed));
   const tier = stats.tier;

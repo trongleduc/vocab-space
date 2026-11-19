@@ -2,6 +2,7 @@ import { LogOut, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { FlameIcon, KnightIcon } from "@/components/icons";
+import { DailyGoalForm } from "@/components/daily-goal-form";
 import { LanguagePicker } from "@/components/language-picker";
 import { PasswordForm } from "@/components/password-form";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -47,6 +48,21 @@ export default async function AccountPage() {
           <p className="mt-1 text-sm text-muted">Chọn những ngôn ngữ bạn muốn học. Có thể đổi bất cứ lúc nào.</p>
           <div className="mt-4">
             <LanguagePicker langs={user.langs} learned={learned} />
+          </div>
+        </section>
+
+        <section id="muc-tieu" className="card scroll-mt-24 p-6 lg:col-span-2">
+          <h2 className="font-bold">Số lượng học mỗi ngày</h2>
+          <p className="mt-1 text-sm text-muted">
+            Tự chọn số từ mới và số câu/thành ngữ nhận mỗi ngày cho từng ngôn ngữ. Để trống để dùng mức mặc định.
+          </p>
+          <div className="mt-4">
+            <DailyGoalForm
+              key={JSON.stringify([user.langs, user.daily])}
+              langs={user.langs}
+              own={user.daily}
+              defaults={settings.daily}
+            />
           </div>
         </section>
 

@@ -1,6 +1,6 @@
-import { Search } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SearchField } from "@/components/search-field";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { WordGrid } from "@/components/word-grid";
 import { requireUser } from "@/lib/auth";
@@ -57,17 +57,14 @@ export default async function BrowsePage({ params, searchParams }: PageProps<"/[
           <Link href={href(lang, {}, { set: "extra" })} data-active={kind === cfg.extraKind} className="chip">
             {cfg.extraLabel}
           </Link>
-          <span className="mx-1 h-5 w-px bg-line" />
-          <form action={`/${lang}/browse`} className="relative min-w-0 flex-1">
-            {sp.set && <input type="hidden" name="set" value={sp.set} />}
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              name="q"
-              defaultValue={sp.q}
-              placeholder={cfg.searchPlaceholder}
-              className="field min-h-10 pl-9"
-            />
-          </form>
+          <span className="mx-1 hidden h-5 w-px bg-line sm:block" />
+          <SearchField
+            action={`/${lang}/browse`}
+            defaultValue={sp.q}
+            placeholder={cfg.searchPlaceholder}
+            hidden={{ set: sp.set }}
+            className="basis-full sm:basis-56 sm:flex-1"
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

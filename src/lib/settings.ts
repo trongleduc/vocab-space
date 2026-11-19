@@ -1,7 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { db, schema } from "@/db";
 import { DEFAULT_RANK_SCALES, type RankScale } from "./gamification";
-import type { ItemKind, Lang } from "./kinds";
+import type { DailyOverrides, ItemKind, Lang } from "./kinds";
 
 export type DailyQuota = Record<ItemKind, number>;
 
@@ -31,6 +31,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   milestones: [10, 50, 100, 250, 500, 1000, 2000, 3000, 5000, 10000],
   rankScales: DEFAULT_RANK_SCALES,
 };
+
+/** A member's quota for one kind: their own number when set, else the admin default. */
+export function quotaFor(settings: AppSettings, own: DailyOverrides | undefined, kind: ItemKind) {
+  return own?.[kind] ?? settings.daily[kind];
+}
 
 export async function getSettings(): Promise<AppSettings> {
   "use cache";

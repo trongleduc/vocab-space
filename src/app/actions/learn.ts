@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
+import { ITEM_KINDS, normalizeDaily } from "@/lib/kinds";
 import { isLang, LANG_CODES } from "@/lib/langs";
 import { recordAnswers, recordLearned, unlearnToday, type Answer } from "@/lib/progress";
 import { getReviewQuestions } from "@/lib/queries";
@@ -56,4 +57,22 @@ export async function enableLanguage(lang: string) {
   const user = await requireUser();
   if (!isLang(lang)) return;
   await setLanguages([...user.langs, lang]);
+}
+
+/**
+ * Save the member's own daily quotas. A number sets that kind, null goes back to the admin
+ * default, and kinds not mentioned keep their current value (e.g. languages that are off).
+ */
+export async function setDailyGoals(changes: Record<string, number | null>) {
+  const user = await requireUser();
+  const next: Record<string, unknown> = { ...user.daily };
+  for (const k of ITEM_KINDS) {
+    if (!(k in changes)) continue;
+    const v = changes[k];
+    if (v === null) delete next[k];
+    else if (typeof v === "number" && Number.isFinite(v)) next[k] = v;
+  }
+  await db.update(schema.users).set({ daily: normalizeDaily(next) }).where(eq(schema.users.id, user.id));
+  refresh();
+  return { ok: true as const };
 }

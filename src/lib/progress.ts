@@ -4,7 +4,8 @@ import { db, schema } from "@/db";
 import { addDays, dayIn } from "./dates";
 import { computeStreak, crossedMilestones, rankFor, streakTier, type Celebration } from "./gamification";
 import { LANG_CODES, LANGS } from "./langs";
-import { getSettings } from "./settings";
+import { normalizeDaily } from "./kinds";
+import { getSettings, quotaFor } from "./settings";
 import { FRESH, firstDue, schedule } from "./srs";
 
 const { progress, activity, items } = schema;
@@ -66,7 +67,11 @@ async function celebrationsAfter(
   after: Snapshot,
   today: string,
 ): Promise<Celebration[]> {
-  const settings = await getSettings();
+  const [settings, [own]] = await Promise.all([
+    getSettings(),
+    db.select({ daily: schema.users.daily }).from(schema.users).where(eq(schema.users.id, userId)),
+  ]);
+  const daily = normalizeDaily(own?.daily);
   const out: Celebration[] = [];
 
   if (firstOfDay) {
@@ -85,7 +90,7 @@ async function celebrationsAfter(
     const kind = LANGS[lang].wordKind;
     const b = get(before, kind);
     const a = get(after, kind);
-    const quota = settings.daily[kind];
+    const quota = quotaFor(settings, daily, kind);
     if (quota > 0 && b.today < quota && a.today >= quota) out.push({ type: "goal", lang, count: a.today });
     if (a.total > b.total) {
       const scale = settings.rankScales[lang];

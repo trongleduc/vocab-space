@@ -9,10 +9,14 @@ import { computeStreak, rankFor, streakTier } from "./gamification";
 import type { SessionUser } from "./auth";
 import { kindsOf, LANG_CODES, LANGS, levelRank, type Lang } from "./langs";
 import { activeDays } from "./progress";
-import { getSettings } from "./settings";
+import { getSettings, quotaFor } from "./settings";
+import { familyPrefix, grammarCloze } from "./en-grammar";
 import { findTarget, shuffle } from "./text";
 
 const { items, progress, activity } = schema;
+
+/** What the read models need to know about the member: who they are and their own quotas. */
+type Learner = Pick<SessionUser, "id" | "daily">;
 
 export type ItemWithStatus = Item & { learnedOn: string | null; priority: boolean };
 
@@ -105,10 +109,11 @@ export const getStats = cache(async (user: SessionUser) => {
  * The set is returned in curriculum order, not grouped by status, so marking or unmarking
  * an item never moves it (marking one swaps nothing in or out of the set).
  */
-export async function getDailyItems(userId: number, kind: ItemKind) {
+export async function getDailyItems(user: Learner, kind: ItemKind) {
+  const userId = user.id;
   const settings = await getSettings();
   const today = await getToday();
-  const quota = settings.daily[kind];
+  const quota = quotaFor(settings, user.daily, kind);
   const learnedToday = flatten(
     await withStatus(userId)
       .where(and(eq(items.kind, kind), eq(progress.learnedOn, today)))
@@ -270,7 +275,7 @@ export async function getReviewQuestions(userId: number, langs: Lang[], anyLearn
 export type PracticeSource = "today" | "learned" | "mistakes" | "level";
 
 export async function getPracticeItems(
-  userId: number,
+  user: Learner,
   lang: Lang,
   source: PracticeSource,
   opts: { level?: string; limit?: number } = {},
@@ -278,7 +283,7 @@ export async function getPracticeItems(
   const kind = LANGS[lang].wordKind;
   const limit = opts.limit ?? 20;
   if (source === "today") {
-    const { items: list } = await getDailyItems(userId, kind);
+    const { items: list } = await getDailyItems(user, kind);
     return shuffle(list);
   }
   const where: SQL[] = [eq(items.kind, kind)];
@@ -286,15 +291,15 @@ export async function getPracticeItems(
   if (source === "mistakes") where.push(sql`(${progress.priority} or ${progress.wrongCount} > 0)`);
   if (source === "level" && opts.level) where.push(eq(items.level, opts.level));
   return flatten(
-    await withStatus(userId)
+    await withStatus(user.id)
       .where(and(...where))
       .orderBy(source === "mistakes" ? desc(progress.priority) : sql`random()`, sql`random()`)
       .limit(limit),
   );
 }
 
-export async function getFlashcards(userId: number, lang: Lang, source: PracticeSource, level?: string) {
-  const list = await getPracticeItems(userId, lang, source, { level, limit: 30 });
+export async function getFlashcards(user: Learner, lang: Lang, source: PracticeSource, level?: string) {
+  const list = await getPracticeItems(user, lang, source, { level, limit: 30 });
   return toQuestions(list, "meaning");
 }
 
@@ -304,40 +309,85 @@ export type ClozeQuestion = {
   reading: string | null;
   meaning: string;
   before: string;
+  /** Text revealed in the blank. */
   answer: string;
   after: string;
   sentenceReading: string | null;
   translation: string;
   choices: string[];
+  /** The choice that is right (the dictionary form in "term" mode, the blank text in "grammar" mode). */
+  correct: string;
+  /** Instruction line above the sentence. */
+  prompt: string;
+  /** Grammar note shown after answering. */
+  explain: string | null;
+  /** Collocations of the word ("arrive at (a place); arrive in (a city)"). */
+  pattern: string | null;
 };
 
 /** Fill-in-the-blank questions from example sentences of learned words. */
-export async function getClozeQuestions(userId: number, lang: Lang, source: PracticeSource, level?: string) {
-  const list = (await getPracticeItems(userId, lang, source, { level, limit: 40 })).filter(
+export async function getClozeQuestions(user: Learner, lang: Lang, source: PracticeSource, level?: string) {
+  const cfg = LANGS[lang];
+  const list = (await getPracticeItems(user, lang, source, { level, limit: 40 })).filter(
     (i) => i.examples.length > 0,
   );
-  const pool = await distractorPool(LANGS[lang].wordKind, 80);
-  const out: ClozeQuestion[] = [];
+  const picked: { item: ItemWithStatus; ex: Item["examples"][number]; t: NonNullable<ReturnType<typeof findTarget>> }[] = [];
   for (const item of list) {
     const ex = shuffle(item.examples).find((e) => findTarget(e.text, item.term));
     if (!ex) continue;
-    const t = findTarget(ex.text, item.term)!;
-    const wrong = [...new Set(shuffle(pool.filter((p) => p.id !== item.id && p.term !== item.term)).map((p) => p.term))].slice(0, 3);
-    out.push({
-      id: item.id,
-      term: item.term,
-      reading: item.reading,
-      meaning: item.meaning,
+    picked.push({ item, ex, t: findTarget(ex.text, item.term)! });
+    if (picked.length >= 15) break;
+  }
+  const base = ({ item, ex }: (typeof picked)[number]) => ({
+    id: item.id,
+    term: item.term,
+    reading: item.reading,
+    meaning: item.meaning,
+    sentenceReading: ex.reading ?? null,
+    translation: ex.translation,
+    pattern: item.prepositions,
+  });
+
+  if (cfg.cloze === "grammar") {
+    const prefixes = [
+      ...new Set(picked.map((p) => familyPrefix(p.item.term)?.replace(/[%_\\]/g, "")).filter((p): p is string => !!p)),
+    ];
+    const [pool, family] = await Promise.all([
+      db
+        .select({ term: items.term, reading: items.reading, pos: items.pos })
+        .from(items)
+        .where(eq(items.kind, cfg.wordKind))
+        .orderBy(sql`random()`)
+        .limit(200),
+      prefixes.length
+        ? db
+            .select({ term: items.term, pos: items.pos })
+            .from(items)
+            .where(and(eq(items.kind, cfg.wordKind), or(...prefixes.map((p) => ilike(items.term, `${p}%`)))))
+        : Promise.resolve([]),
+    ]);
+    return picked.map((p): ClozeQuestion => {
+      const g = grammarCloze(p.item, { before: p.t.before, target: p.t.target, after: p.t.after }, pool, family);
+      return { ...base(p), ...g, correct: g.answer };
+    });
+  }
+
+  const pool = await distractorPool(cfg.wordKind, 80);
+  return picked.map((p): ClozeQuestion => {
+    const { item, t } = p;
+    const wrong = [...new Set(shuffle(pool.filter((x) => x.id !== item.id && x.term !== item.term)).map((x) => x.term))].slice(0, 3);
+    return {
+      ...base(p),
+      pattern: null,
       before: t.before,
       answer: t.target,
       after: t.after,
-      sentenceReading: ex.reading ?? null,
-      translation: ex.translation,
       choices: shuffle([item.term, ...wrong]),
-    });
-    if (out.length >= 15) break;
-  }
-  return out;
+      correct: item.term,
+      prompt: "Điền từ phù hợp vào chỗ trống",
+      explain: null,
+    };
+  });
 }
 
 export async function countItems(kind: ItemKind) {

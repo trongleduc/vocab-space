@@ -12,7 +12,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { DEFAULT_LANGS, ITEM_KINDS, type ItemKind, type Lang } from "@/lib/kinds";
+import { DEFAULT_LANGS, ITEM_KINDS, type DailyOverrides, type ItemKind, type Lang } from "@/lib/kinds";
 
 export { ITEM_KINDS, type ItemKind };
 
@@ -33,6 +33,8 @@ export const users = pgTable("users", {
   active: boolean("active").notNull().default(true),
   /** Languages the member is learning; drives nav, dashboard and the review queue. */
   langs: jsonb("langs").$type<Lang[]>().notNull().default(DEFAULT_LANGS),
+  /** Personal daily quota per item kind; a missing kind falls back to the admin default. */
+  daily: jsonb("daily").$type<DailyOverrides>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
