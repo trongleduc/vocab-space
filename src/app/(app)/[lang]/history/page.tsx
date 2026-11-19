@@ -1,6 +1,7 @@
 import { Flag } from "lucide-react";
 import { notFound } from "next/navigation";
 import { SpeakButton } from "@/components/speak";
+import { spokenForm } from "@/lib/voices";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { LevelBadge } from "@/components/word-card";
 import { requireUser } from "@/lib/auth";
@@ -41,7 +42,7 @@ export default async function HistoryPage({ params }: PageProps<"/[lang]/history
                     </div>
                     {item.priority && <Flag size={14} className="shrink-0 text-bad" aria-label="Cần ôn" />}
                     <LevelBadge level={item.level} />
-                    <SpeakButton text={item.term} lang={cfg.speech} />
+                    <SpeakButton text={spokenForm(item.term, item.reading, cfg.speech)} lang={cfg.speech} />
                   </li>
                 ))}
               </ul>

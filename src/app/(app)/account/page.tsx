@@ -7,6 +7,8 @@ import { LanguagePicker } from "@/components/language-picker";
 import { PasswordForm } from "@/components/password-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PageHeader, RankLine } from "@/components/ui";
+import { VoicePicker } from "@/components/voice-picker";
+import { ttsConfigured } from "@/lib/tts";
 import { requireUser } from "@/lib/auth";
 import { KNIGHT_TITLES, STREAK_TIERS } from "@/lib/gamification";
 import { LANG_CODES, LANGS } from "@/lib/langs";
@@ -63,6 +65,16 @@ export default async function AccountPage() {
               own={user.daily}
               defaults={settings.daily}
             />
+          </div>
+        </section>
+
+        <section id="giong-doc" className="card scroll-mt-24 p-6 lg:col-span-2">
+          <h2 className="font-bold">Giọng đọc</h2>
+          <p className="mt-1 text-sm text-muted">
+            Chạm vào một giọng để nghe thử và chọn. Lựa chọn được lưu trên thiết bị này.
+          </p>
+          <div className="mt-4">
+            <VoicePicker langs={user.langs} server={ttsConfigured()} />
           </div>
         </section>
 

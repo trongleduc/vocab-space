@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { markLearned, unmarkLearned } from "@/app/actions/learn";
 import { fontOfKind, isExtraKind } from "@/lib/langs";
 import type { ItemWithStatus } from "@/lib/queries";
+import { spokenForm } from "@/lib/voices";
 import { useCelebrate } from "./celebrate";
 import { ExampleLine } from "./example";
 import { SpeakButton } from "./speak";
@@ -116,7 +117,7 @@ export function WordCard({
             </span>
           )}
         </div>
-        <SpeakButton text={item.term} lang={speech} />
+        <SpeakButton text={spokenForm(item.term, item.reading, speech)} lang={speech} />
       </div>
 
       <div className="mt-3">
@@ -150,7 +151,7 @@ export function WordCard({
         <div className="mt-4">
           <ul className="space-y-3">
             {examples.map((ex, i) => (
-              <ExampleLine key={i} ex={ex} font={font} />
+              <ExampleLine key={i} ex={ex} font={font} speech={speech} />
             ))}
           </ul>
           {item.examples.length > 1 && (

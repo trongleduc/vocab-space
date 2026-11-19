@@ -7,7 +7,8 @@ import { fontOfKind } from "@/lib/langs";
 import type { QuizQuestion } from "@/lib/queries";
 import { pickQuote } from "@/lib/quotes";
 import { QuoteBlock, useCelebrate } from "./celebrate";
-import { Highlighted } from "./example";
+import { spokenForm } from "@/lib/voices";
+import { ExampleBox } from "./example";
 import { SpeakButton } from "./speak";
 
 /** `font` is the script class of the term (han, ja, ko) for the mistakes list. */
@@ -242,7 +243,7 @@ export function QuizSession({
           >
             {q.term}
           </h2>
-          <SpeakButton text={q.term} lang={speech(q)} size="md" />
+          <SpeakButton text={spokenForm(q.term, q.reading, speech(q))} lang={speech(q)} size="md" />
         </div>
         <div className="mt-3 h-6 text-muted">
           {q.reading &&
@@ -284,15 +285,7 @@ export function QuizSession({
 
       {answered && (
         <div className="mt-6 animate-rise">
-          {q.example && (
-            <div className="rounded-2xl bg-surface-2 p-4 text-left">
-              <div className={font ? "text-lg" : ""}>
-                <Highlighted text={q.example.text} font={font} />
-              </div>
-              {q.example.reading && <div className="text-sm text-muted">{q.example.reading}</div>}
-              <div className="text-sm italic text-muted">{q.example.translation}</div>
-            </div>
-          )}
+          {q.example && <ExampleBox ex={q.example} font={font} speech={speech(q)} large />}
           <button className="btn btn-primary mt-4 w-full" onClick={next} autoFocus>
             {index + 1 >= questions.length ? "Xem kết quả" : "Tiếp tục"}
           </button>

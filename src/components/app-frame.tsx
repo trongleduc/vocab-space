@@ -3,12 +3,14 @@
 import { BookOpen, Home, LogOut, RotateCcw, Settings2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { logout } from "@/app/actions/auth";
 import type { Rank } from "@/lib/gamification";
 import { LANGS, type Lang } from "@/lib/langs";
 import { CelebrationProvider } from "./celebrate";
 import { FloatingReview } from "./floating-review";
 import { FlameIcon, KnightIcon } from "./icons";
+import { setServerTts } from "./speak";
 import { ThemeToggle } from "./theme-toggle";
 
 export type FrameStats = {
@@ -111,23 +113,35 @@ export function AppFrame({
   user,
   appName,
   stats,
+  tts,
   children,
 }: {
   user: { name: string; role: "admin" | "member" };
   appName: string;
   stats: FrameStats;
+  /** Server has neural TTS (Azure) configured. */
+  tts: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  useEffect(() => setServerTts(tts), [tts]);
+  // <html> carries the tier too, so the page behind overscroll and portals match the shell.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.tier = String(stats.tier);
+    return () => {
+      delete root.dataset.tier;
+    };
+  }, [stats.tier]);
   const items = nav(user.role === "admin", stats.langs);
   // The admin link lives on the profile page on mobile; the bar grows with the number of languages.
   const mobileItems = items.filter((i) => i.href !== "/admin");
 
   return (
-    <div className="accent-scope min-h-dvh" data-tier={stats.tier}>
+    <div className="accent-scope streak-theme min-h-dvh" data-tier={stats.tier}>
       <CelebrationProvider tier={stats.tier}>
         {/* Desktop sidebar */}
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r-[1.5px] border-line bg-surface px-4 py-6 lg:flex">
+        <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r-[1.5px] border-line streak-sidebar px-4 py-6 lg:flex">
           <div className="px-2">
             <Logo name={appName} />
           </div>
@@ -149,7 +163,7 @@ export function AppFrame({
             })}
           </nav>
           <div className="mt-auto space-y-3">
-            <div className="rounded-2xl border-[1.5px] border-line p-3">
+            <div className="rounded-2xl border-[1.5px] border-accent/30 bg-accent-soft p-3">
               <div className="flex items-center gap-2">
                 <FlameIcon tier={stats.tier} lit={stats.activeToday && stats.streak > 0} size={30} animated />
                 <div className="leading-tight">
@@ -176,7 +190,7 @@ export function AppFrame({
         </aside>
 
         {/* Top bar */}
-        <header className="sticky top-0 z-20 border-b-[1.5px] border-line bg-bg/85 backdrop-blur-md lg:ml-64">
+        <header className="sticky top-0 z-20 border-b-[1.5px] border-line bg-chrome/85 backdrop-blur-md lg:ml-64">
           <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
             <div className="lg:hidden">
               <Logo name={appName} />
@@ -201,7 +215,7 @@ export function AppFrame({
         </main>
 
         {/* Mobile bottom nav */}
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-line bg-chrome/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
           <div
             className="mx-auto grid max-w-lg"
             style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}

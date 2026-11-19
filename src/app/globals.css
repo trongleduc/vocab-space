@@ -3,10 +3,17 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --bg: #f7f7f5;
-  --surface: #ffffff;
-  --surface-2: #f0f0ed;
-  --line: #e4e4e0;
+  /* Neutral palette. The streak theme tints --bg/--surface/--line from these bases. */
+  --bg-base: #f7f7f5;
+  --surface-base: #ffffff;
+  --surface-2-base: #f0f0ed;
+  --line-base: #e4e4e0;
+  --bg: var(--bg-base);
+  --surface: var(--surface-base);
+  --surface-2: var(--surface-2-base);
+  --line: var(--line-base);
+  --chrome: var(--surface);
+  --glow: transparent;
   --ink: #121212;
   --muted: #6d6d68;
   --good: #2f9e44;
@@ -18,10 +25,10 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0c0c0c;
-  --surface: #161616;
-  --surface-2: #1e1e1e;
-  --line: #2a2a2a;
+  --bg-base: #0c0c0c;
+  --surface-base: #161616;
+  --surface-2-base: #1e1e1e;
+  --line-base: #2a2a2a;
   --ink: #f1f1ef;
   --muted: #9b9b96;
   --good: #51cf66;
@@ -30,13 +37,34 @@
   color-scheme: dark;
 }
 
-/* Accent follows the streak tier. Tier 0 stays black/white. */
-[data-tier="1"] { --accent: #e8a317; --accent-ink: #1d1400; }
-[data-tier="2"] { --accent: #f2711c; --accent-ink: #ffffff; }
-[data-tier="3"] { --accent: #e03131; --accent-ink: #ffffff; }
-[data-tier="4"] { --accent: #d6336c; --accent-ink: #ffffff; }
-[data-tier="5"] { --accent: #7048e8; --accent-ink: #ffffff; }
-[data-tier="6"] { --accent: #1c7ed6; --accent-ink: #ffffff; }
+/* Accent follows the streak tier. Tier 0 stays black/white. --tint is how strongly the page
+   background takes on the accent and --tint-line how strongly lines and the glow do; both grow
+   with the streak. */
+[data-tier="1"] { --accent: #e8a317; --accent-ink: #1d1400; --tint: 7.5%; --tint-line: 27%; }
+[data-tier="2"] { --accent: #f2711c; --accent-ink: #ffffff; --tint: 8.25%; --tint-line: 28.5%; }
+[data-tier="3"] { --accent: #e03131; --accent-ink: #ffffff; --tint: 9%; --tint-line: 30%; }
+[data-tier="4"] { --accent: #d6336c; --accent-ink: #ffffff; --tint: 9.75%; --tint-line: 33%; }
+[data-tier="5"] { --accent: #7048e8; --accent-ink: #ffffff; --tint: 11.25%; --tint-line: 37.5%; }
+[data-tier="6"] { --accent: #1c7ed6; --accent-ink: #ffffff; --tint: 12.75%; --tint-line: 42%; }
+
+/* Streak theme: the app shell (and <html>, for overscroll) tint every neutral towards the accent.
+   Declared on the element that carries data-tier so the mixes use that tier's accent. Wrapped in
+   @supports so browsers without color-mix keep the neutral palette instead of a flat accent. */
+@supports (color: color-mix(in oklab, red, red)) {
+  :is(.streak-theme, :root)[data-tier]:not([data-tier="0"]) {
+    --bg: color-mix(in oklab, var(--accent) var(--tint), var(--bg-base));
+    --surface: color-mix(in oklab, var(--bg) 35%, var(--surface-base));
+    --surface-2: color-mix(in oklab, var(--accent) var(--tint), var(--surface-2-base));
+    --line: color-mix(in oklab, var(--accent) var(--tint-line), var(--line-base));
+    --chrome: color-mix(in oklab, var(--accent) 15%, var(--surface-base));
+    --glow: color-mix(in oklab, var(--accent) var(--tint-line), transparent);
+  }
+  [data-theme="dark"] .streak-theme[data-tier]:not([data-tier="0"]),
+  [data-theme="dark"][data-tier]:not([data-tier="0"]) {
+    --surface: color-mix(in oklab, var(--bg) 60%, var(--surface-base));
+    --chrome: color-mix(in oklab, var(--accent) 16.5%, var(--surface-base));
+  }
+}
 
 @theme inline {
   --color-bg: var(--bg);
@@ -51,6 +79,7 @@
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --color-accent-deep: var(--accent-deep);
+  --color-chrome: var(--chrome);
   --font-sans: var(--font-vn), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, monospace;
   --font-han: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
@@ -107,6 +136,27 @@ body {
 
 .accent-scope {
   transition: --accent 900ms ease;
+}
+
+.streak-theme {
+  position: relative;
+  isolation: isolate;
+  background: var(--bg);
+}
+/* Soft glow of the streak colour behind the content; invisible at tier 0 (--glow is transparent). */
+.streak-theme::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(80% 50% at 50% -12%, var(--glow), transparent 70%),
+    radial-gradient(45% 40% at 105% 105%, color-mix(in oklab, var(--glow) 55%, transparent), transparent 70%);
+}
+/* Sidebar: the colour gathers at the top, behind the logo. */
+.streak-sidebar {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--glow) 70%, var(--chrome)) 0%, var(--chrome) 45%);
 }
 
 .han {
@@ -223,6 +273,28 @@ body {
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: 22px;
+  transition: background-color 600ms ease, border-color 600ms ease;
+}
+
+/* Read-aloud buttons: a pulsing ring while their text is playing. */
+.speak-btn[data-playing="true"] {
+  --btn-bg: var(--accent-soft);
+  --btn-edge: var(--accent);
+  color: var(--accent);
+}
+.speak-btn[data-playing="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid var(--accent);
+  animation: ring 1.2s ease-out infinite;
+  pointer-events: none;
+}
+.btn-sm.btn-icon.speak-xs {
+  width: 1.9rem;
+  min-height: 1.9rem;
+  border-radius: 9px;
 }
 
 .chip {

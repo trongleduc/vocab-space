@@ -4,6 +4,7 @@ import { FrameSkeleton } from "@/components/skeleton";
 import { requireUser } from "@/lib/auth";
 import { getStats } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { ttsConfigured } from "@/lib/tts";
 
 // Every page here is per-user, so navigations are allowed to wait on the session.
 export const instant = false;
@@ -15,6 +16,7 @@ async function Frame({ children }: { children: React.ReactNode }) {
     <AppFrame
       user={{ name: user.name, role: user.role }}
       appName={settings.appName}
+      tts={ttsConfigured()}
       stats={{
         streak: stats.streak,
         activeToday: stats.activeToday,

@@ -17,7 +17,7 @@ npm run db:push    # sync src/db/schema.ts to Neon (drizzle-kit push, no migrati
 npm run db:seed    # create the first admin (if no users) + starter content; idempotent
 ```
 
-`DATABASE_URL` (Neon Postgres) lives in `.env.local`, which is gitignored. Drizzle-kit and the seed script load `.env.local` themselves. `ADMIN_NAME` / `ADMIN_PASSWORD` can be set when seeding; otherwise the seed prints a random password. There is no test runner.
+`DATABASE_URL` (Neon Postgres) lives in `.env.local`, which is gitignored. Optional `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` turn on neural voices through `/api/tts`; without them the browser's speech engine is used. Drizzle-kit and the seed script load `.env.local` themselves. `ADMIN_NAME` / `ADMIN_PASSWORD` can be set when seeding; otherwise the seed prints a random password. There is no test runner.
 
 ## Stack
 
@@ -66,7 +66,9 @@ Per-user state lives in `progress` (SRS fields, one row per user/item, created w
 - Both writes return `Celebration[]`: a streak celebration on the first activity of a day when the streak is ≥2, and milestone crossings.
 - Server Actions in `src/app/actions/learn.ts` wrap these. Client components pass the result to `useCelebrate().celebrate()` (`components/celebrate.tsx`, canvas-confetti plus a modal).
 
-**Shell** (`components/app-frame.tsx`, client): it renders the sidebar, bottom nav, streak/rank badges and the floating review bubble (`components/floating-review.tsx`). It sets `data-tier` on the `.accent-scope` wrapper. CSS in `globals.css` maps each tier to `--accent`, which is registered with `@property` so it animates. Derived accent colours are declared on `.accent-scope` as well as `:root`, because custom properties resolve where they are declared.
+**Speech** (`components/speak.tsx`, `lib/voices.ts`): `VOICES[lang]` lists four voices per language (two female, two male; ids are Azure neural voice names). The member's choice and reading speed are stored per device in localStorage (`vs-voice`) and picked on `/account` (`components/voice-picker.tsx`). `speak(text, locale)` plays `/api/tts` audio when the server has Azure configured (the layout passes `ttsConfigured()` to the shell), and falls back to `speechSynthesis`, where `pickDeviceVoice` takes the same voice in Edge or the best local voice of the same gender and accent. Words go through `spokenForm` first, so Japanese kanji words are spoken from their kana reading. Example sentences get a read-aloud button through `ExampleLine`/`ExampleBox` (`components/example.tsx`) when given a `speech` locale.
+
+**Shell** (`components/app-frame.tsx`, client): it renders the sidebar, bottom nav, streak/rank badges and the floating review bubble (`components/floating-review.tsx`). It sets `data-tier` on the `.accent-scope.streak-theme` wrapper and on `<html>`. CSS in `globals.css` maps each tier to `--accent`, which is registered with `@property` so it animates, plus `--tint`/`--tint-line`, which tint `--bg`, `--surface`, `--line`, `--chrome` (header, bottom nav) and `--glow` from the neutral `--*-base` colours. Derived accent colours are declared on `.accent-scope` as well as `:root`, because custom properties resolve where they are declared. Small `.accent-scope` elements (tier list, celebration chip) only change the accent, not the page tint.
 
 **Gamification constants** (`lib/gamification.ts`): streak tiers, knight titles, and default rank scales (official HSK 3.0 cumulative word counts; CEFR estimates). Admins can override the scales, daily quotas, milestones and timezone at `/admin/settings`. These are stored as key/value rows in `settings` and merged over `DEFAULT_SETTINGS`.
 

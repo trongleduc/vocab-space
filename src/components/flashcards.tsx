@@ -8,7 +8,8 @@ import { fontOfKind } from "@/lib/langs";
 import type { QuizQuestion } from "@/lib/queries";
 import { shuffle } from "@/lib/text";
 import { useCelebrate } from "./celebrate";
-import { Highlighted } from "./example";
+import { spokenForm } from "@/lib/voices";
+import { ExampleBox } from "./example";
 import { ProgressBar, QuizSession, ResultSummary, useCombo, type AnswerLog } from "./quiz";
 import { SpeakButton } from "./speak";
 
@@ -93,7 +94,7 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
           <div className="flip-face flip-back card flex flex-col items-center justify-center overflow-y-auto p-6 text-center shadow-[0_6px_0_var(--line)]">
             <div className="flex items-center gap-2">
               <p className={`font-bold ${font ? `${font} text-4xl` : "text-3xl"}`}>{card.term}</p>
-              <SpeakButton text={card.term} lang={speech} />
+              <SpeakButton text={spokenForm(card.term, card.reading, speech)} lang={speech} />
             </div>
             {card.reading && <p className="mt-1 text-muted">{card.reading}</p>}
             <p className="mt-3 text-xl font-semibold">{card.meaning}</p>
@@ -107,12 +108,8 @@ function FlipDeck({ cards, speech, onRestart }: { cards: QuizQuestion[]; speech:
               </div>
             )}
             {card.example && (
-              <div className="mt-4 w-full rounded-2xl bg-surface-2 p-3 text-left text-sm">
-                <div className={font ? "text-base" : ""}>
-                  <Highlighted text={card.example.text} font={font} />
-                </div>
-                {card.example.reading && <div className="text-muted">{card.example.reading}</div>}
-                <div className="italic text-muted">{card.example.translation}</div>
+              <div className="mt-4 w-full">
+                <ExampleBox ex={card.example} font={font} speech={speech} />
               </div>
             )}
           </div>

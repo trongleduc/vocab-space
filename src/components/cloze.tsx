@@ -7,7 +7,7 @@ import { submitAnswers } from "@/app/actions/learn";
 import type { ClozeQuestion } from "@/lib/queries";
 import { useCelebrate } from "./celebrate";
 import { ProgressBar, ResultSummary, useCombo, type AnswerLog } from "./quiz";
-import { speak } from "./speak";
+import { speak, SpeakButton } from "./speak";
 
 /** Fill-in-the-blank exercise built from example sentences. */
 /** `font` is the script class for the language (han, ja, ko; "" for English). */
@@ -107,7 +107,12 @@ export function Cloze({ questions, speech, font }: { questions: ClozeQuestion[];
           </span>
           {q.after}
         </p>
-        {answered && q.sentenceReading && <p className="mt-2 text-muted animate-rise">{q.sentenceReading}</p>}
+        {answered && (
+          <div className="mt-2 flex items-start justify-between gap-2 animate-rise">
+            <p className="text-muted">{q.sentenceReading}</p>
+            <SpeakButton text={q.before + q.answer + q.after} lang={speech} label="Nghe lại câu" />
+          </div>
+        )}
         <div className="mt-4 min-h-6 text-sm">
           {answered || hint ? (
             <p className="italic text-muted animate-rise">{q.translation}</p>

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ExampleLine } from "@/components/example";
 import { LearnAllButton } from "@/components/learn-all";
 import { SpeakButton } from "@/components/speak";
+import { spokenForm } from "@/lib/voices";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { WordGrid } from "@/components/word-grid";
 import { requireUser } from "@/lib/auth";
@@ -62,11 +63,11 @@ export default async function ExpressionsPage({ params }: PageProps<"/[lang]/exp
                         {item.reading && <p className="text-sm text-muted">{item.reading}</p>}
                         <p className="mt-0.5">{item.meaning}</p>
                       </div>
-                      <SpeakButton text={item.term} lang={cfg.speech} />
+                      <SpeakButton text={spokenForm(item.term, item.reading, cfg.speech)} lang={cfg.speech} />
                     </div>
                     {item.examples[0] && (
                       <ul className="mt-2">
-                        <ExampleLine ex={item.examples[0]} font={font} />
+                        <ExampleLine ex={item.examples[0]} font={font} speech={cfg.speech} />
                       </ul>
                     )}
                   </li>
