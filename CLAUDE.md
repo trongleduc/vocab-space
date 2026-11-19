@@ -43,7 +43,9 @@ These versions are newer than most training data. Check `node_modules/next/dist/
 
 - `reading` holds pinyin (zh), IPA (en), Revised Romanization (ko) or `kana · romaji` (ja; romaji alone for kana-only words). `meaning` is Vietnamese.
 - `prepositions` is English only, `;`-separated.
-- `note` is a usage note. Korean/Japanese seed words put the Sino-Vietnamese reading here.
+- `note` is a usage note. Korean/Japanese/Chinese seed words put the Sino-Vietnamese reading here.
+
+Content beyond the hand-written starter sets comes from two generated files in `src/db/seed-data/`: `zh-hsk30.json` (the full official HSK 3.0 list, 11,092 words merged to 10,944 terms) and `en-cefr.json` (CEFR B1–C2 from CEFR-J 1.5 + Octanove C1/C2, CC BY-SA 4.0) and `ja-jlpt.json` (JLPT N5–N1 from open-anki-jlpt-decks, MIT; romaji generated from kana). Their Vietnamese meanings, IPA, Hán Việt readings and the HSK 1–3 / B1 / N5–N4 examples were machine-written, so admins may correct individual items. List rows use `sortOrder` 10000+ so hand-written words come first within a level; the seed also syncs existing Chinese words to their official HSK 3.0 level. See the header of `seed.ts` for row formats and sources.
 - `letter` is precomputed for browsing by `letterOf(term, reading, lang)`: A–Z (Chinese uses the first pinyin letter without tones), the initial consonant ㄱ ㄴ ㄷ… for Korean, and the kana row あ か さ… for Japanese.
 - `examples` is a JSONB array of `{text, reading?, translation}`. **The target word in an example is wrapped in `[brackets]`.** Brackets drive highlighting (`components/example.tsx`) and blanking in exercises (`findTarget` in `src/lib/text.ts`).
 

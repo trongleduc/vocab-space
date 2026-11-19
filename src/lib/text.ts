@@ -90,7 +90,8 @@ export function letterOf(term: string, reading?: string | null, lang?: string) {
     return HANGUL_PLAIN[initial] ?? initial;
   }
   if (KANA.test(first)) return kanaRow(term) ?? "#";
-  if (/[㐀-鿿]/.test(first) && reading && KANA.test(reading.trim().charAt(0))) return kanaRow(reading) ?? "#";
+  // Kanji or affix terms (食べる, ～円): the kana reading decides the row. Only Japanese readings start with kana.
+  if (reading && KANA.test(reading.trim().charAt(0))) return kanaRow(reading) ?? "#";
   if (lang === "ja") return romajiRow(reading ?? "") ?? "#";
   const source = /[㐀-鿿]/.test(term) ? (reading ?? "") : term;
   const ch = source

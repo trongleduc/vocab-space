@@ -1,5 +1,5 @@
-/** [sentence, romanization, meaning, topic, usage note] */
-export type KoPhraseRow = [string, string, string, string, string];
+/** [sentence, romanization, meaning, topic, usage note, examples?: [sentence, romanization, translation][]] */
+export type KoPhraseRow = [string, string, string, string, string, [string, string, string][]?];
 
 export const KO_PHRASES: KoPhraseRow[] = [
   ["오랜만이에요!", "Oraenmanieyo!", "Lâu rồi không gặp!", "Chào hỏi", "Gặp lại người quen sau một thời gian dài."],
