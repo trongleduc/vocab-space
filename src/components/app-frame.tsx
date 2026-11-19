@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Home, LogOut, RotateCcw, Settings2, UserRound } from "lucide-react";
+import { BookOpen, Home, LogOut, RotateCcw, Settings2, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -11,6 +11,7 @@ import { CelebrationProvider } from "./celebrate";
 import { FloatingReview } from "./floating-review";
 import { FlameIcon, KnightIcon } from "./icons";
 import { setServerTts } from "./speak";
+import { StreakRestore, type LostStreak } from "./streak-restore";
 import { ThemeToggle } from "./theme-toggle";
 
 export type FrameStats = {
@@ -18,6 +19,10 @@ export type FrameStats = {
   activeToday: boolean;
   tier: number;
   tierName: string;
+  /** Unused streak freezes. */
+  freezes: number;
+  /** Most recently lost streak, while a freeze can still bring it back. */
+  lost: LostStreak | null;
   dueTotal: number;
   total: number;
   /** Languages the user is learning, in display order. */
@@ -79,15 +84,35 @@ function Logo({ name }: { name: string }) {
 }
 
 export function StreakBadge({ stats, compact = false }: { stats: FrameStats; compact?: boolean }) {
+  const restorable = Boolean(stats.lost && stats.freezes > 0);
   return (
     <Link
-      href="/account"
+      href={restorable ? "/#giu-chuoi" : "/account"}
       className="flex items-center gap-1 rounded-full border-[1.5px] border-line bg-surface py-1 pl-1.5 pr-3 transition hover:border-accent"
-      title={stats.activeToday ? `Chuỗi ${stats.streak} ngày` : "Học một từ hôm nay để giữ lửa"}
+      title={[
+        stats.activeToday ? `Chuỗi ${stats.streak} ngày` : "Học một từ hôm nay để giữ lửa",
+        restorable ? `Có thể lấy lại chuỗi ${stats.lost!.streak} ngày` : "",
+        stats.freezes > 0 ? `Còn ${stats.freezes} lượt giữ chuỗi` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")}
     >
       <FlameIcon tier={stats.tier} lit={stats.activeToday && stats.streak > 0} size={compact ? 22 : 26} animated />
       <span className="font-mono text-[15px] font-bold tabular-nums">{stats.streak}</span>
+      {stats.freezes > 0 && <FreezeCount n={stats.freezes} pulse={restorable} />}
     </Link>
+  );
+}
+
+/** Shield with the number of streak freezes left; pulses while one can bring back a lost streak. */
+export function FreezeCount({ n, pulse = false }: { n: number; pulse?: boolean }) {
+  return (
+    <span
+      className={`ml-0.5 inline-flex items-center gap-0.5 text-[13px] font-bold text-[#1c7ed6] dark:text-[#74c0fc] ${pulse ? "animate-pulse" : ""}`}
+    >
+      <ShieldCheck size={15} strokeWidth={2.4} />
+      <span className="font-mono tabular-nums">{n}</span>
+    </span>
   );
 }
 
@@ -168,8 +193,19 @@ export function AppFrame({
                 <FlameIcon tier={stats.tier} lit={stats.activeToday && stats.streak > 0} size={30} animated />
                 <div className="leading-tight">
                   <div className="font-bold">{stats.streak} ngày</div>
-                  <div className="text-xs text-muted">{stats.activeToday ? stats.tierName : "Chưa học hôm nay"}</div>
+                  <div className="text-xs text-muted">
+                    {stats.lost && stats.freezes > 0
+                      ? `Lấy lại được chuỗi ${stats.lost.streak} ngày`
+                      : stats.activeToday
+                        ? stats.tierName
+                        : "Chưa học hôm nay"}
+                  </div>
                 </div>
+                {stats.freezes > 0 && (
+                  <span className="ml-auto" title={`Còn ${stats.freezes} lượt giữ chuỗi`}>
+                    <FreezeCount n={stats.freezes} pulse={Boolean(stats.lost)} />
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-between gap-2 px-1">
@@ -209,6 +245,12 @@ export function AppFrame({
             </div>
           </div>
         </header>
+
+        {stats.lost && stats.freezes > 0 && pathname !== "/" && (
+          <div className="lg:ml-64">
+            <StreakRestore lost={stats.lost} freezes={stats.freezes} banner />
+          </div>
+        )}
 
         <main className="pb-28 lg:ml-64 lg:pb-12">
           <div className="mx-auto max-w-5xl px-4 pt-6 sm:px-6 sm:pt-8">{children}</div>

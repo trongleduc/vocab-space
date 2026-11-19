@@ -6,7 +6,7 @@ import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { ITEM_KINDS, normalizeDaily } from "@/lib/kinds";
 import { isLang, LANG_CODES } from "@/lib/langs";
-import { recordAnswers, recordLearned, unlearnToday, type Answer } from "@/lib/progress";
+import { recordAnswers, recordLearned, restoreStreak, unlearnToday, type Answer } from "@/lib/progress";
 import { getReviewQuestions } from "@/lib/queries";
 
 export async function markLearned(itemIds: number[]) {
@@ -30,6 +30,14 @@ export async function submitAnswers(answers: Answer[]) {
     .map((a) => ({ itemId: a.itemId, correct: Boolean(a.correct) }))
     .slice(0, 200);
   const result = await recordAnswers(user.id, clean);
+  refresh();
+  return result;
+}
+
+/** Spend a streak freeze to bring back the most recently lost streak. */
+export async function spendFreeze() {
+  const user = await requireUser();
+  const result = await restoreStreak(user.id);
   refresh();
   return result;
 }

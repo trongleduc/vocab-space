@@ -5,10 +5,10 @@ import { cache } from "react";
 import { db, schema } from "@/db";
 import type { Item, ItemKind } from "@/db/schema";
 import { addDays, dayIn } from "./dates";
-import { computeStreak, rankFor, streakTier } from "./gamification";
+import { rankFor, streakTier } from "./gamification";
 import type { SessionUser } from "./auth";
 import { kindsOf, LANG_CODES, LANGS, levelRank, type Lang } from "./langs";
-import { activeDays } from "./progress";
+import { streakState } from "./progress";
 import { getSettings, quotaFor } from "./settings";
 import { familyPrefix, grammarCloze } from "./en-grammar";
 import { findTarget, shuffle } from "./text";
@@ -58,8 +58,8 @@ export const getStats = cache(async (user: SessionUser) => {
   const userId = user.id;
   const settings = await getSettings();
   const today = await getToday();
-  const [days, learnedRows, dueRows, weekRows] = await Promise.all([
-    activeDays(userId),
+  const [streakInfo, learnedRows, dueRows, weekRows] = await Promise.all([
+    streakState(userId, today),
     db
       .select({ kind: items.kind, n: count() })
       .from(progress)
@@ -77,7 +77,7 @@ export const getStats = cache(async (user: SessionUser) => {
       .from(activity)
       .where(and(eq(activity.userId, userId), sql`${activity.day} > ${addDays(today, -7)}`)),
   ]);
-  const { streak, activeToday } = computeStreak(days, today, addDays(today, -1));
+  const { streak, activeToday, freezes, toNextFreeze, lost } = streakInfo;
   const learned = Object.fromEntries(learnedRows.map((r) => [r.kind, r.n])) as Partial<Record<ItemKind, number>>;
   const due = Object.fromEntries(dueRows.map((r) => [r.kind, r.n])) as Partial<Record<ItemKind, number>>;
   const week = Array.from({ length: 7 }, (_, i) => {
@@ -93,6 +93,9 @@ export const getStats = cache(async (user: SessionUser) => {
     today,
     streak,
     activeToday,
+    freezes,
+    toNextFreeze,
+    lost,
     tier: streakTier(streak),
     learned,
     total,

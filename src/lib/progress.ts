@@ -1,8 +1,16 @@
 import "server-only";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { addDays, dayIn } from "./dates";
-import { computeStreak, crossedMilestones, rankFor, streakTier, type Celebration } from "./gamification";
+import { dayIn } from "./dates";
+import {
+  computeStreak,
+  crossedMilestones,
+  FREEZE_EVERY,
+  normalizeSaves,
+  rankFor,
+  streakTier,
+  type Celebration,
+} from "./gamification";
 import { LANG_CODES, LANGS } from "./langs";
 import { normalizeDaily } from "./kinds";
 import { getSettings, quotaFor } from "./settings";
@@ -30,7 +38,8 @@ async function snapshot(userId: number, today: string): Promise<Snapshot> {
 const sum = (s: Snapshot) => Object.values(s).reduce((a, v) => a + v.total, 0);
 const get = (s: Snapshot, kind: string) => s[kind] ?? { total: 0, today: 0 };
 
-export async function activeDays(userId: number, limit = 400) {
+/** Active days, newest first. The limit is generous because freezes let a chain run past gaps. */
+export async function activeDays(userId: number, limit = 4000) {
   const rows = await db
     .select({ day: activity.day })
     .from(activity)
@@ -38,6 +47,41 @@ export async function activeDays(userId: number, limit = 400) {
     .orderBy(desc(activity.day))
     .limit(limit);
   return rows.map((r) => r.day);
+}
+
+/** Streak, freezes and the restorable lost chain for a user (see computeStreak). */
+export async function streakState(userId: number, today: string) {
+  const [days, [row]] = await Promise.all([
+    activeDays(userId),
+    db.select({ saves: schema.users.streakSaves }).from(schema.users).where(eq(schema.users.id, userId)),
+  ]);
+  return computeStreak(days, today, normalizeSaves(row?.saves));
+}
+
+/**
+ * Spend one freeze to bring back the most recently lost streak. Re-checks everything server side;
+ * the update only applies if no freeze was used today, so a double click cannot spend two.
+ */
+export async function restoreStreak(userId: number): Promise<{ error: string } | { celebrations: Celebration[] }> {
+  const { timezone } = await getSettings();
+  const today = dayIn(timezone);
+  const state = await streakState(userId, today);
+  if (!state.lost) return { error: "Không có chuỗi nào có thể lấy lại." };
+  if (state.freezes < 1) return { error: "Bạn chưa có lượt giữ chuỗi." };
+  const save = { on: today, days: state.lost.days };
+  const updated = await db
+    .update(schema.users)
+    .set({ streakSaves: sql`${schema.users.streakSaves} || ${JSON.stringify([save])}::jsonb` })
+    .where(
+      and(
+        eq(schema.users.id, userId),
+        sql`not exists (select 1 from jsonb_array_elements(${schema.users.streakSaves}) e where e->>'on' = ${today})`,
+      ),
+    )
+    .returning({ id: schema.users.id });
+  if (!updated.length) return { error: "Hôm nay bạn đã dùng lượt giữ chuỗi rồi." };
+  const after = await streakState(userId, today);
+  return { celebrations: [{ type: "streak", days: after.streak, restored: true, freezes: after.freezes }] };
 }
 
 /** Add to today's activity row. Returns true when this is the first activity of the day. */
@@ -75,13 +119,15 @@ async function celebrationsAfter(
   const out: Celebration[] = [];
 
   if (firstOfDay) {
-    const { streak } = computeStreak(await activeDays(userId), today, addDays(today, -1));
+    const { streak, freezes } = await streakState(userId, today);
     if (streak >= 2) {
       const tier = streakTier(streak);
       out.push({
         type: "streak",
         days: streak,
         tierUp: tier.index > 0 && tier.min === streak ? { index: tier.index, name: tier.name } : undefined,
+        earnedFreeze: streak % FREEZE_EVERY === 0 || undefined,
+        freezes,
       });
     }
   }

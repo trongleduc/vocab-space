@@ -1,3 +1,4 @@
+import { addDays } from "./dates";
 import type { Lang } from "./langs";
 
 /* ---------- Streak colour tiers ---------- */
@@ -23,18 +24,98 @@ export function streakTier(streak: number) {
   return { index, ...STREAK_TIERS[index], next: STREAK_TIERS[index + 1] ?? null };
 }
 
-/** Consecutive active days ending today (or yesterday, if nothing has been done yet today). */
-export function computeStreak(activeDays: string[], today: string, yesterday: string) {
-  const set = new Set(activeDays);
-  const activeToday = set.has(today);
-  if (!activeToday && !set.has(yesterday)) return { streak: 0, activeToday };
+/** Every this many active days in one chain earns one streak freeze. */
+export const FREEZE_EVERY = 20;
+/** Days after a streak is lost during which the member can still spend a freeze to bring it back. */
+export const RESTORE_WINDOW = 3;
+
+/** One use of a freeze: the day it was used and the missed days it bridged. */
+export type StreakSave = { on: string; days: string[] };
+
+export type StreakState = {
+  /** Active days in the current chain. Bridged days keep a chain together but do not count. */
+  streak: number;
+  activeToday: boolean;
+  /** Freezes earned so far minus those used. Earned freezes survive a broken chain. */
+  freezes: number;
+  /** Active days still needed in the current chain for the next freeze. */
+  toNextFreeze: number;
+  /** The most recently lost chain while it can still be restored, with the missed days a freeze would bridge. */
+  lost: { streak: number; days: string[]; deadline: string; daysLeft: number } | null;
+};
+
+const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
+
+function dayRange(from: string, to: string) {
+  const out: string[] = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+export function normalizeSaves(raw: unknown): StreakSave[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((s) =>
+    s && typeof s === "object" && typeof s.on === "string" && Array.isArray(s.days)
+      ? [{ on: s.on, days: s.days.filter((d: unknown): d is string => typeof d === "string") }]
+      : [],
+  );
+}
+
+/**
+ * Streak replayed from the activity history plus the days bridged by freezes the member chose
+ * to use. A chain earns one freeze for every FREEZE_EVERY active days. Freezes are never spent
+ * automatically: when a chain breaks, the member has RESTORE_WINDOW days (counted from the day
+ * it was lost) to spend one, which bridges the missed days and joins the lost chain to whatever
+ * came after it. Today does not count as missed until it is over.
+ */
+export function computeStreak(activeDays: string[], today: string, saves: StreakSave[] = []): StreakState {
+  const active = new Set(activeDays.filter((d) => d <= today));
+  const bridged = saves.flatMap((s) => s.days).filter((d) => d < today);
+  const days = [...new Set([...active, ...bridged])].sort();
+
   let streak = 0;
-  const cursor = new Date(`${activeToday ? today : yesterday}T00:00:00Z`);
-  while (set.has(cursor.toISOString().slice(0, 10))) {
-    streak++;
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  let earned = 0;
+  let prev: string | null = null;
+  let broken: { end: string; streak: number } | null = null;
+  for (const day of days) {
+    if (prev && dayNumber(day) - dayNumber(prev) > 1) {
+      broken = { end: prev, streak };
+      streak = 0;
+    }
+    if (active.has(day)) {
+      streak++;
+      if (streak % FREEZE_EVERY === 0) earned++;
+    }
+    prev = day;
   }
-  return { streak, activeToday };
+  if (prev && dayNumber(today) - dayNumber(prev) > 1) {
+    broken = { end: prev, streak };
+    streak = 0;
+  }
+
+  let lost: StreakState["lost"] = null;
+  if (broken && broken.streak > 0) {
+    const firstMissed = addDays(broken.end, 1);
+    // Lost once the first missed day is over; restorable on that day and the two after it.
+    const deadline = addDays(firstMissed, RESTORE_WINDOW);
+    if (today <= deadline) {
+      const next = days.find((d) => d > broken.end);
+      lost = {
+        streak: broken.streak,
+        days: dayRange(firstMissed, addDays(next ?? today, -1)),
+        deadline,
+        daysLeft: dayNumber(deadline) - dayNumber(today) + 1,
+      };
+    }
+  }
+
+  return {
+    streak,
+    activeToday: active.has(today),
+    freezes: Math.max(0, earned - saves.length),
+    toNextFreeze: FREEZE_EVERY - (streak % FREEZE_EVERY),
+    lost,
+  };
 }
 
 /* ---------- Knight ranks (HSK 3.0 / CEFR) ---------- */
@@ -132,7 +213,17 @@ export function rankFor(learned: number, scale: RankScale): Rank {
 /* ---------- Celebrations ---------- */
 
 export type Celebration =
-  | { type: "streak"; days: number; tierUp?: { index: number; name: string } }
+  | {
+      type: "streak";
+      days: number;
+      tierUp?: { index: number; name: string };
+      /** The member just spent a freeze to bring this streak back. */
+      restored?: boolean;
+      /** A new freeze was earned today. */
+      earnedFreeze?: boolean;
+      /** Freezes left after today. */
+      freezes?: number;
+    }
   | { type: "milestone"; count: number }
   | { type: "goal"; lang: Lang; count: number }
   | { type: "rank"; lang: Lang; level: string; title: string; color: string; index: number };

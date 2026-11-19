@@ -22,6 +22,8 @@ async function Frame({ children }: { children: React.ReactNode }) {
         activeToday: stats.activeToday,
         tier: stats.tier.index,
         tierName: stats.tier.name,
+        freezes: stats.freezes,
+        lost: stats.lost && { streak: stats.lost.streak, daysLeft: stats.lost.daysLeft },
         dueTotal: stats.dueTotal,
         total: stats.total,
         langs: user.langs,

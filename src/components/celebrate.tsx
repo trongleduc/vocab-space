@@ -1,5 +1,6 @@
 "use client";
 
+import { ShieldCheck } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Celebration } from "@/lib/gamification";
 import { LANGS } from "@/lib/langs";
@@ -170,7 +171,7 @@ function CelebrationCard({ item, tier }: { item: Queued; tier: number }) {
       <>
         <div className="relative mx-auto mb-4 grid size-32 place-items-center">
           <span className="absolute inset-0 rounded-full bg-accent/25 animate-ring" />
-          <FlameIcon tier={Math.max(c.tierUp?.index ?? tier, 1)} size={112} animated />
+          <FlameIcon tier={Math.max(c.tierUp?.index ?? tier, 1)} size={100} animated />
           <span className="absolute bottom-3 font-mono text-3xl font-bold text-white drop-shadow">{c.days}</span>
         </div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">Chuỗi ngày học</p>
@@ -179,6 +180,22 @@ function CelebrationCard({ item, tier }: { item: Queued; tier: number }) {
           <div data-tier={c.tierUp.index} className="accent-scope mt-3 inline-flex items-center gap-2 rounded-full border-[1.5px] border-accent bg-accent-soft px-3 py-1.5 text-sm font-semibold animate-pop">
             <span className="size-3.5 rounded-full bg-accent" />
             Mở khóa màu “{c.tierUp.name}”
+          </div>
+        )}
+        {(c.restored || c.earnedFreeze) && (
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {c.restored && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[#1c7ed6]/40 bg-[#1c7ed6]/10 px-3 py-1.5 text-sm font-semibold animate-pop">
+                <ShieldCheck size={16} className="text-[#1c7ed6]" />
+                Đã lấy lại chuỗi bằng 1 lượt giữ chuỗi · còn {c.freezes ?? 0}
+              </span>
+            )}
+            {c.earnedFreeze && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[#1c7ed6]/40 bg-[#1c7ed6]/10 px-3 py-1.5 text-sm font-semibold animate-pop">
+                <ShieldCheck size={16} className="text-[#1c7ed6]" />
+                Nhận 1 lượt giữ chuỗi · có {c.freezes ?? 1}
+              </span>
+            )}
           </div>
         )}
       </>

@@ -1,9 +1,11 @@
-import { ArrowRight, Plus, RotateCcw } from "lucide-react";
+import { ArrowRight, Plus, RotateCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { FlameIcon } from "@/components/icons";
+import { StreakRestore } from "@/components/streak-restore";
 import { Bar, PageHeader, RankLine } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { formatDay, weekdayShort } from "@/lib/dates";
+import { FREEZE_EVERY } from "@/lib/gamification";
 import { LANG_CODES, LANGS } from "@/lib/langs";
 import { getDailyItems, getStats } from "@/lib/queries";
 
@@ -20,6 +22,8 @@ export default async function Dashboard() {
     <div>
       <PageHeader eyebrow={formatDay(stats.today)} title={`Chào ${user.name}`} description="Mỗi ngày một ít, đều đặn là đủ." />
 
+      {stats.lost && <StreakRestore lost={stats.lost} freezes={stats.freezes} />}
+
       <section className="card relative overflow-hidden p-6 sm:p-7">
         <div className="flex flex-wrap items-center gap-5">
           <div className="relative grid size-20 shrink-0 place-items-center rounded-3xl bg-surface-2">
@@ -35,9 +39,20 @@ export default async function Dashboard() {
                 ? tier.next
                   ? `Màu "${tier.name}". Còn ${tier.next.min - stats.streak} ngày nữa để lên "${tier.next.name}".`
                   : `Bạn đang ở cấp lửa cao nhất: "${tier.name}".`
-                : stats.streak > 0
-                  ? "Học ít nhất một từ hôm nay để giữ chuỗi."
-                  : "Học một từ để bắt đầu chuỗi ngày đầu tiên."}
+                : stats.lost
+                  ? `Chuỗi ${stats.lost.streak} ngày đã bị cắt. Học hôm nay để bắt đầu lại, hoặc dùng lượt giữ chuỗi để lấy lại.`
+                  : stats.streak > 0
+                    ? "Học ít nhất một từ hôm nay để giữ chuỗi."
+                    : "Học một từ để bắt đầu chuỗi ngày đầu tiên."}
+            </p>
+            <p className="mt-2 inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+              <ShieldCheck size={16} strokeWidth={2.4} className="text-[#1c7ed6] dark:text-[#74c0fc]" />
+              <span className="font-semibold">
+                {stats.freezes > 0 ? `${stats.freezes} lượt giữ chuỗi` : "Chưa có lượt giữ chuỗi"}
+              </span>
+              <span className="text-muted">
+                · còn {stats.toNextFreeze} ngày học nữa để nhận thêm 1 lượt ({FREEZE_EVERY} ngày liên tiếp = 1 lượt)
+              </span>
             </p>
           </div>
           <div className="flex w-full items-end gap-2 sm:w-auto" aria-label="Hoạt động 7 ngày qua">

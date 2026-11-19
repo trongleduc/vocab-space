@@ -1,4 +1,4 @@
-import { LogOut, Settings2 } from "lucide-react";
+import { LogOut, Settings2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { FlameIcon, KnightIcon } from "@/components/icons";
@@ -10,7 +10,7 @@ import { PageHeader, RankLine } from "@/components/ui";
 import { VoicePicker } from "@/components/voice-picker";
 import { ttsConfigured } from "@/lib/tts";
 import { requireUser } from "@/lib/auth";
-import { KNIGHT_TITLES, STREAK_TIERS } from "@/lib/gamification";
+import { FREEZE_EVERY, KNIGHT_TITLES, RESTORE_WINDOW, STREAK_TIERS } from "@/lib/gamification";
 import { LANG_CODES, LANGS } from "@/lib/langs";
 import { getStats } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
@@ -132,6 +132,19 @@ export default async function AccountPage() {
           <p className="mt-1 text-sm text-muted">
             Giao diện bắt đầu đen trắng và đổi màu chủ đạo khi chuỗi ngày học dài hơn.
           </p>
+          <div className="mt-4 flex gap-3 rounded-2xl bg-surface-2 p-3 text-sm">
+            <ShieldCheck size={20} strokeWidth={2.4} className="mt-0.5 shrink-0 text-[#1c7ed6] dark:text-[#74c0fc]" />
+            <div>
+              <p className="font-semibold">
+                Giữ chuỗi: {stats.freezes > 0 ? `còn ${stats.freezes} lượt` : "chưa có lượt nào"}
+              </p>
+              <p className="mt-0.5 text-muted">
+                Cứ {FREEZE_EVERY} ngày học liên tiếp bạn nhận 1 lượt, lượt chưa dùng được giữ lại kể cả khi mất chuỗi.
+                Khi chuỗi bị cắt, bạn có {RESTORE_WINDOW} ngày để tự chọn dùng 1 lượt lấy lại chuỗi gần nhất (những ngày
+                nghỉ không được cộng vào chuỗi). Còn {stats.toNextFreeze} ngày học nữa để nhận lượt tiếp theo.
+              </p>
+            </div>
+          </div>
           <ul className="mt-5 space-y-2">
             {STREAK_TIERS.map((t, i) => {
               const current = stats.tier.index === i;

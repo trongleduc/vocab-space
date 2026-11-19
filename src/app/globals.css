@@ -396,6 +396,63 @@ mark.target {
 .animate-rise { animation: rise 320ms ease both; }
 .animate-shake { animation: shake 380ms ease; }
 .animate-flicker { animation: flicker 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+
+/* ---------- Streak flame (components/icons.tsx) ----------
+   Three layers sway at different speeds so the flame looks like it is burning, the halo
+   breathes and embers rise. --flame-speed gets shorter as the streak tier rises. */
+.flame {
+  filter: drop-shadow(0 0 1.5px color-mix(in oklab, var(--flame-edge) 45%, transparent));
+}
+.flame g,
+.flame-halo,
+.flame-spark {
+  transform-box: fill-box;
+}
+.flame-outer,
+.flame-mid,
+.flame-core {
+  transform-origin: 50% 100%;
+}
+.flame[data-burning="true"] .flame-outer {
+  animation: flame-sway var(--flame-speed) ease-in-out infinite;
+}
+.flame[data-burning="true"] .flame-mid {
+  animation: flame-sway calc(var(--flame-speed) * 0.72) ease-in-out infinite reverse;
+}
+.flame[data-burning="true"] .flame-core {
+  animation: flame-lick calc(var(--flame-speed) * 0.4) ease-in-out infinite alternate;
+}
+.flame-halo {
+  transform-origin: 50% 50%;
+  animation: flame-halo calc(var(--flame-speed) * 1.5) ease-in-out infinite;
+}
+.flame-spark {
+  opacity: 0;
+  transform-origin: 50% 50%;
+  animation: flame-spark 1.7s ease-out infinite;
+}
+.flame-spark:nth-of-type(even) {
+  --spark-dx: -1.6px;
+}
+@keyframes flame-sway {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); }
+  25% { transform: scale(0.96, 1.07) skewX(-4deg); }
+  50% { transform: scale(1.03, 0.95) skewX(2deg); }
+  75% { transform: scale(0.98, 1.05) skewX(3.5deg); }
+}
+@keyframes flame-lick {
+  from { transform: scale(0.9, 0.86) translateY(0.3px); }
+  to { transform: scale(1.06, 1.14) translateY(-0.5px); }
+}
+@keyframes flame-halo {
+  0%, 100% { transform: scale(0.88); opacity: 0.65; }
+  50% { transform: scale(1.14); opacity: 1; }
+}
+@keyframes flame-spark {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(var(--spark-dx, 1.6px), -10px) scale(0.3); opacity: 0; }
+}
 .animate-bob { animation: bob 2.4s ease-in-out infinite; }
 .animate-ring { animation: ring 1.6s ease-out infinite; }
 .check-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw 350ms 80ms ease forwards; }
